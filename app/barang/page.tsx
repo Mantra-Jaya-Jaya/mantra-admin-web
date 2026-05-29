@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { Search, Trash2, Edit2, Plus, ChevronDown, BadgePercent, Loader2 } from "lucide-react";
+import { 
+  Search, Trash2, Edit2, Plus, ChevronDown, BadgePercent, 
+  Loader2, LayoutDashboard, AlertTriangle 
+} from "lucide-react";
 import Link from 'next/link';
 
 export default function BarangPage() {
@@ -15,6 +18,10 @@ export default function BarangPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // 🚀 STATE MODAL KONFIRMASI HAPUS
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, publicId: "", namaBarang: "" });
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // 🚀 AMBIL DATA DARI SERVER
   useEffect(() => {
     const fetchBarang = async () => {
@@ -23,7 +30,7 @@ export default function BarangPage() {
         const json = await res.json();
         
         if (res.ok && json.data) {
-          setDataBarang(json.data); // Data Postman lu masuk ke sini
+          setDataBarang(json.data); 
         } else {
           setErrorMsg("Gagal memuat daftar produk dari server.");
         }
@@ -38,13 +45,40 @@ export default function BarangPage() {
     fetchBarang();
   }, []);
 
-  // 🚀 BARU: Pembuat List Kategori Otomatis & Dinamis dari DB Lu!
+  // 🚀 FUNGSI EKSEKUSI HAPUS (Tanpa Notifikasi Toast)
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    const targetId = deleteModal.publicId;
+
+    try {
+      const res = await fetch(`/api/v1/admin/barang/${targetId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+
+      if (res.ok) {
+        // UI Magic: Buang baris data secara instan
+        setDataBarang(prev => prev.filter(item => (item.public_id || item.id_barang) !== targetId));
+        setDeleteModal({ isOpen: false, publicId: "", namaBarang: "" });
+        setErrorMsg(""); // Bersihkan error jika ada
+      } else {
+        setErrorMsg("Gagal menghapus: " + json.message);
+        setDeleteModal({ isOpen: false, publicId: "", namaBarang: "" });
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      setErrorMsg("Terjadi kesalahan saat menghubungi server untuk menghapus data.");
+      setDeleteModal({ isOpen: false, publicId: "", namaBarang: "" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const daftarKategoriDinamis = useMemo(() => {
     const kategoriSet = new Set(dataBarang.map((item) => item.kategori).filter(Boolean));
     return ["Semua Kategori", ...Array.from(kategoriSet)];
   }, [dataBarang]);
 
-  // 💸 HELPER FORMAT RUPIAH
   const formatRupiah = (angka: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -53,7 +87,7 @@ export default function BarangPage() {
     }).format(angka);
   };
 
-  // 1. LOGIC FILTERING
+  // LOGIC FILTERING & PAGINATION
   const filteredData = dataBarang.filter((item) => {
     const nama = item.nama_barang || "";
     const sku = item.sku || `MTR-${item.id_barang}`; 
@@ -62,7 +96,6 @@ export default function BarangPage() {
 
     const matchesSearch = nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           sku.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesKategori = kategoriFilter === "Semua Kategori" || kategori === kategoriFilter;
 
     let matchesStok = true;
@@ -72,12 +105,10 @@ export default function BarangPage() {
     return matchesSearch && matchesKategori && matchesStok;
   });
 
-  // 2. LOGIC PAGINATION
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
-  // LOADING SCREEN ANIMATION
   if (loading) {
     return (
       <div className="w-full h-96 flex flex-col items-center justify-center text-zinc-400 gap-3">
@@ -87,17 +118,40 @@ export default function BarangPage() {
     );
   }
 
-  // ERROR BOX STATE
-  if (errorMsg) {
-    return (
-      <div className="w-full p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-semibold mb-6">
-        ⚠️ {errorMsg}
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full">
+    <div className="w-full relative">
+
+      {/* 🚀 MANTRA DELETE CONFIRMATION MODAL */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform animate-in zoom-in-95 duration-200 border border-zinc-200 p-6 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mb-4 text-[#AF520C] border border-red-100">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-extrabold text-zinc-900 mb-2">Hapus Produk?</h3>
+            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+              Anda yakin ingin menghapus <span className="font-bold text-zinc-800">"{deleteModal.namaBarang}"</span>? Seluruh data varian, harga, dan histori stok produk ini akan dihapus permanen.
+            </p>
+            <div className="flex w-full gap-3">
+              <button 
+                onClick={() => setDeleteModal({ isOpen: false, publicId: "", namaBarang: "" })}
+                className="flex-1 px-4 py-2.5 bg-zinc-100 text-zinc-700 font-bold text-sm rounded-xl hover:bg-zinc-200 transition"
+                disabled={isDeleting}
+              >
+                Batal
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2.5 bg-[#AF520C] text-white font-bold text-sm rounded-xl hover:bg-[#AF520C] transition flex items-center justify-center gap-2"
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Halaman */}
       <div className="flex justify-between items-end mb-8">
         <div>
@@ -106,8 +160,12 @@ export default function BarangPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link href="/barang/kategori" className="flex items-center gap-2 bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm">
-            <Plus size={18} />
+            <LayoutDashboard size={18} />
             Kategori
+          </Link>
+          <Link href="/barang/diskon" className="flex items-center gap-2 bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm">
+            <BadgePercent size={18} />
+            Diskon
           </Link>
           <Link href="/barang/tambah" className="flex items-center gap-2 bg-[#AF520C] hover:bg-[#8e4209] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm">
             <Plus size={18} />
@@ -118,7 +176,6 @@ export default function BarangPage() {
 
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm mb-6 flex flex-col sm:flex-row gap-4">
-        {/* Search Input */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
           <input
@@ -127,14 +184,9 @@ export default function BarangPage() {
             placeholder="Cari nama barang atau SKU..."
             className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-[#AF520C]"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
-
-        {/* Dropdown Kategori */}
         <div className="relative">
           <select 
             className="appearance-none bg-white border border-zinc-200 text-zinc-700 text-sm rounded-lg pl-4 pr-10 py-2 outline-none cursor-pointer hover:bg-zinc-50 focus:border-[#AF520C] capitalize"
@@ -147,8 +199,6 @@ export default function BarangPage() {
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
         </div>
-
-        {/* Dropdown Stok */}
         <div className="relative">
           <select 
             className="appearance-none bg-white border border-zinc-200 text-zinc-700 text-sm rounded-lg pl-4 pr-10 py-2 outline-none cursor-pointer hover:bg-zinc-50 focus:border-[#AF520C]"
@@ -163,8 +213,14 @@ export default function BarangPage() {
         </div>
       </div>
 
+      {errorMsg && (
+        <div className="w-full p-4 bg-red-50 border border-red-200 text-[#AF520C] rounded-xl text-sm font-semibold mb-6 animate-in fade-in duration-200">
+          ⚠️ {errorMsg}
+        </div>
+      )}
+
       {/* Tabel Data */}
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden relative">
         <table className="w-full text-left">
           <thead className="bg-[#f8fafc] text-zinc-600 text-xs font-bold uppercase tracking-wider border-b border-zinc-200">
             <tr>
@@ -181,32 +237,28 @@ export default function BarangPage() {
               const itemKategori = item.kategori || "Tanpa Kategori";
               const itemSku = item.sku || `MTR-${item.id_barang}`;
               
-              // 🚀 JALUR AMAN: Ambil target UUID, fallback ke id jika data lama kosong
-              const detailTarget = `/barang/detail/${item.public_id || item.id_barang}`;
+              const idTarget = item.public_id || item.id_barang;
+              const detailUrl = `/barang/detail/${idTarget}`;
+              const editUrl = `/barang/edit/${idTarget}`;
 
               return (
                 <tr key={item.id_barang} className="hover:bg-zinc-50 transition-colors">
-                  {/* 🚀 MODIFIKASI: Kolom Nama Barang Sekarang Clickable Menuju Halaman Detail */}
                   <td className="px-6 py-4 flex items-center gap-4">
-                    {/* Link pada foto produk */}
-                    <Link href={detailTarget} className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-zinc-100 border border-zinc-200 block hover:opacity-80 transition-opacity cursor-pointer">
+                    <Link href={detailUrl} className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-zinc-100 border border-zinc-200 block hover:opacity-80 transition-opacity cursor-pointer">
                       <img src={item.gambar_barang} alt={item.nama_barang} className="w-full h-full object-cover" />
                     </Link>
                     <div>
-                      {/* Link pada teks nama produk dengan hover effect warna khas Mantra */}
-                      <Link href={detailTarget} className="font-bold text-zinc-900 hover:text-[#AF520C] transition-colors block cursor-pointer">
+                      <Link href={detailUrl} className="font-bold text-zinc-900 hover:text-[#AF520C] transition-colors block cursor-pointer">
                         {item.nama_barang}
                       </Link>
                       <p className="text-zinc-400 text-xs mt-0.5">SKU: {itemSku}</p>
                     </div>
                   </td>
                   
-                  {/* Kolom Harga Terendah */}
                   <td className="px-6 py-4 font-semibold text-zinc-700">
                     {formatRupiah(item.harga_terendah)}
                   </td>
                   
-                  {/* Kolom Stok */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{itemStok}</span>
@@ -214,19 +266,19 @@ export default function BarangPage() {
                     </div>
                   </td>
 
-                  {/* Kolom Kategori */}
                   <td className="px-6 py-4 text-zinc-600 capitalize">{itemKategori}</td>
 
-                  {/* Kolom Action */}
+                  {/* ACTION BUTTONS */}
                   <td className="px-6 py-4">
                     <div className="flex gap-4 justify-center text-zinc-400">
-                      <button className="hover:text-green-600 transition-colors" title="Set Diskon">
-                        <BadgePercent size={18} />
-                      </button>
-                      <button className="hover:text-blue-500 transition-colors" title="Edit">
+                      <Link href={editUrl} className="hover:text-blue-500 transition-colors" title="Edit">
                         <Edit2 size={18} />
-                      </button>
-                      <button className="hover:text-red-500 transition-colors" title="Hapus">
+                      </Link>
+                      <button 
+                        onClick={() => setDeleteModal({ isOpen: true, publicId: idTarget, namaBarang: item.nama_barang })}
+                        className="hover:text-red-500 transition-colors" 
+                        title="Hapus"
+                      >
                         <Trash2 size={18} />
                       </button>
                     </div>
