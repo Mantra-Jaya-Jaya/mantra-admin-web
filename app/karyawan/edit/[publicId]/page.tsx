@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { 
   CloudUpload, ChevronRight, User, Phone, Mail, Lock, 
@@ -10,35 +10,97 @@ import {
 
 export default function EditKaryawanPage() {
   const router = useRouter();
+  const params = useParams();
+  const publicId = params.publicId;
+
   const [loading, setLoading] = useState(false);
   
-  // Data Dummy (Nantinya dapet dari API berdasarkan ID)
   const [role, setRole] = useState("Kasir");
   const [shift, setShift] = useState("Siang");
   const [status, setStatus] = useState("Aktif");
   const [showPassword, setShowPassword] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const [formData, setFormData] = useState({
-    nama: "Siti Aminah",
-    noTelp: "81234567890",
-    email: "siti.aminah@mantra.com",
-    nik: "3275001234567890",
-    tempatLahir: "Jakarta",
-    tglLahir: "1995-05-15",
+    nama: "",
+    noTelp: "",
+    email: "",
+    password: "",
+    nik: "",
+    tempatLahir: "",
+    tglLahir: "",
     gender: "Wanita",
     pendidikan: "D3 / S1",
-    alamat: "Jl. Merdeka No. 123, Kebayoran Baru, Jakarta Selatan, 12110"
+    alamat: ""
   });
+
+  useEffect(() => {
+    if (!publicId) return;
+    const fetchDetail = async () => {
+      try {
+        const res = await fetch(`/api/v1/admin/karyawan/${publicId}`);
+        const result = await res.json();
+        if (res.ok && result.data) {
+          const d = result.data;
+          setRole(d.role || "Kasir");
+          setShift(d.shift || "Siang");
+          setStatus(d.status || "Aktif");
+          setFormData({
+            nama: d.nama_lengkap || "",
+            noTelp: d.no_telp || "",
+            email: d.email || "",
+            password: "",
+            nik: d.nik || "",
+            tempatLahir: d.tempat_lahir || "",
+            tglLahir: d.tanggal_lahir ? d.tanggal_lahir.split('T')[0] : "",
+            gender: d.jenis_kelamin || "Wanita",
+            pendidikan: d.pendidikan_terakhir || "D3 / S1",
+            alamat: d.alamat || ""
+          });
+        }
+      } catch (e) {
+        console.error("Gagal fetch data", e);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [publicId]);
 
   const handleSimpan = async () => {
     setLoading(true);
-    // Logic update ke API Golang temen lu
-    console.log("Update Data:", { ...formData, role, shift, status });
-    
-    setTimeout(() => {
+    const payload = {
+      nama_lengkap: formData.nama,
+      no_telp: formData.noTelp,
+      email: formData.email,
+      password: formData.password || undefined,
+      nik: formData.nik,
+      tempat_lahir: formData.tempatLahir,
+      tanggal_lahir: formData.tglLahir,
+      jenis_kelamin: formData.gender,
+      pendidikan_terakhir: formData.pendidikan,
+      alamat: formData.alamat,
+      status: status,
+      shift: role === "Kasir" ? shift : ""
+    };
+
+    try {
+      const res = await fetch(`/api/v1/admin/karyawan/${publicId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        router.push("/karyawan");
+      } else {
+        const err = await res.json();
+        alert(err.message || "Gagal menyimpan");
+      }
+    } catch (e) {
+      alert("Error jaringan");
+    } finally {
       setLoading(false);
-      router.push("/karyawan");
-    }, 1000);
+    }
   };
 
   return (
