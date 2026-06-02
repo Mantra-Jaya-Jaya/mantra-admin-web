@@ -1,45 +1,52 @@
 "use client";
-import { useState } from "react";
-import { AlertTriangle, UserX, CheckCheck } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCheck, Loader2 } from "lucide-react";
 import NotificationItem from "@/components/NotificationItem";
 
 export default function NotifikasiPage() {
-  // Data Dummy sesuai request lu (Cuma Stok & Karyawan)
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "stock",
-      title: "Low Stock Alert: Kertas HVS A4",
-      description: "Inventory for 'Kertas HVS A4 70gsm' has dropped below the threshold of 5 Rim. Current stock is 2 Rim. Reorder recommended.",
-      time: "10m ago",
-      isRead: false,
-    },
-    {
-      id: 2,
-      type: "employee",
-      title: "Inactive Employee Alert",
-      description: "Admin 'Siti Aminah' (Kasir) has not logged into the POS system for the past 3 days. Please check their active status.",
-      time: "1h ago",
-      isRead: false,
-    },
-    {
-      id: 3,
-      type: "stock",
-      title: "Low Stock Alert: Tinta Printer Epson Black",
-      description: "Inventory for 'Tinta Epson 664 Black' has dropped to 1 bottle. Immediate restock required.",
-      time: "Yesterday",
-      isRead: true, // Ini ceritanya udah dibaca
-    }
-  ]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  // Fungsi tandai semua dibaca
+  // 🚀 NGE-FETCH DATA DARI GOLANG
+  useEffect(() => {
+    const fetchNotifikasi = async () => {
+      try {
+        // Sesuaikan URL-nya dengan nama grup route admin lu
+        const res = await fetch("/api/v1/admin/notifikasi");
+        const json = await res.json();
+        
+        if (res.ok && json.data) {
+          // Tambahin isRead manual, karena dari Golang belum ngirim status dibaca/belum
+          const dataWithReadStatus = json.data.map((n: any) => ({
+            ...n,
+            isRead: n.status === "read" // Anggap aja kalau "read" berarti true
+          }));
+          setNotifications(dataWithReadStatus);
+        } else {
+          setErrorMsg(json.message || "Gagal memuat notifikasi dari server.");
+        }
+      } catch (err) {
+        console.error("Fetch notifikasi error:", err);
+        setErrorMsg("Gagal terhubung ke API Server. Pastikan backend Golang aktif!");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifikasi();
+  }, []);
+
+  // Fungsi tandai semua dibaca (UI Only sementara)
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    // Next Step: Kasih fetch PUT/PATCH ke Golang di sini buat update status ke DB
   };
 
-  // Fungsi hapus/dismiss notif
-  const dismissNotification = (id: number) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  // Fungsi hapus/dismiss notif (UI Only sementara)
+  const dismissNotification = (idTarget: string) => {
+    setNotifications(notifications.filter(n => n.id_notifikasi !== idTarget));
+    // Next Step: Kasih fetch DELETE ke Golang di sini buat hapus dari DB
   };
 
   return (
@@ -48,7 +55,7 @@ export default function NotifikasiPage() {
       <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 mb-1">Notifikasi</h1>
-          <p className="text-sm text-zinc-500 font-medium">Atur notifikasi & update sistem.</p>
+          <p className="text-sm text-zinc-500 font-medium">Pantau peringatan & update sistem secara real-time.</p>
         </div>
         
         <button 
@@ -60,12 +67,23 @@ export default function NotifikasiPage() {
         </button>
       </div>
 
+      {errorMsg && (
+        <div className="w-full p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-semibold mb-6">
+          ⚠️ {errorMsg}
+        </div>
+      )}
+
       {/* CONTAINER LIST NOTIFIKASI */}
       <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mb-6">
-        {notifications.length > 0 ? (
+        {loading ? (
+           <div className="p-12 flex flex-col items-center justify-center text-zinc-400 gap-3">
+             <Loader2 className="animate-spin text-[#AF520C]" size={40} />
+             <p className="font-bold text-sm text-zinc-700">Menarik data dari server...</p>
+           </div>
+        ) : notifications.length > 0 ? (
           notifications.map((notif) => (
             <NotificationItem 
-              key={notif.id} 
+              key={notif.id_notifikasi} 
               notif={notif} 
               onDismiss={dismissNotification} 
             />
@@ -73,20 +91,11 @@ export default function NotifikasiPage() {
         ) : (
           <div className="p-12 text-center flex flex-col items-center">
             <CheckCheck size={40} className="text-zinc-300 mb-3" />
-            <p className="text-sm font-bold text-zinc-500">Semua notifikasi sudah dibaca</p>
-            <p className="text-xs text-zinc-400 mt-1">Belum ada peringatan baru hari ini.</p>
+            <p className="text-sm font-bold text-zinc-500">Semua aman terkendali!</p>
+            <p className="text-xs text-zinc-400 mt-1">Belum ada peringatan stok atau notifikasi sistem hari ini.</p>
           </div>
         )}
       </div>
-
-      {/* TOMBOL LOAD MORE */}
-      {notifications.length > 0 && (
-        <div className="flex justify-center">
-          <button className="px-6 py-2 bg-zinc-50 border border-zinc-200 text-zinc-500 rounded-lg text-xs font-bold hover:bg-zinc-100 hover:text-zinc-700 transition shadow-sm">
-            Load More
-          </button>
-        </div>
-      )}
 
     </div>
   );
