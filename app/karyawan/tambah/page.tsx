@@ -14,18 +14,48 @@ export default function TambahKaryawanPage() {
   const [role, setRole] = useState("Kasir"); // Default Kasir
   const [shift, setShift] = useState("Pagi");
 
+  // State Foto
+  const [fotoProfil, setFotoProfil] = useState<string>("");
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+
   // State Form
   const [formData, setFormData] = useState({
     nama: "", noTelp: "", email: "", password: "", username: "",
     nik: "", tempatLahir: "", tanggalLahir: "",
-    jenisKelamin: "Wanita", pendidikanTerakhir: "D3 / S1", alamat: ""
+    jenisKelamin: "", pendidikanTerakhir: "", alamat: ""
   });
+
+  const handleUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const data = new FormData();
+    data.append("foto", file);
+
+    setUploadingFoto(true);
+    try {
+      const res = await fetch("/api/v1/admin/karyawan/upload", {
+        method: "POST",
+        body: data,
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setFotoProfil(result.url);
+      } else {
+        alert(result.message || "Gagal upload foto");
+      }
+    } catch (err) {
+      alert("Error jaringan saat upload");
+    } finally {
+      setUploadingFoto(false);
+    }
+  };
 
   const handleSimpan = async () => {
     setLoading(true);
     // Simulasi Payload buat temen backend lu
     const payload = {
       ...formData,
+      foto_profil: fotoProfil,
       role: role,
       shift: role === "Kasir" ? shift : null // Shift null kalau Kurir
     };
@@ -90,10 +120,17 @@ export default function TambahKaryawanPage() {
             
             {/* Upload Foto */}
             <div className="flex flex-col items-center mb-8">
-              <div className="w-32 h-32 rounded-full border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center bg-zinc-50 hover:bg-orange-50 transition cursor-pointer group relative overflow-hidden">
-                <CloudUpload size={24} className="text-zinc-400 group-hover:text-[#AF520C]" />
-                <span className="text-[10px] font-bold text-zinc-400 mt-1">Upload Foto</span>
-              </div>
+              <label className="w-32 h-32 rounded-full border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center bg-zinc-50 hover:bg-orange-50 transition cursor-pointer group relative overflow-hidden">
+                <input type="file" className="hidden" accept="image/*" onChange={handleUploadFoto} disabled={uploadingFoto} />
+                {fotoProfil ? (
+                  <img src={fotoProfil} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <CloudUpload size={24} className="text-zinc-400 group-hover:text-[#AF520C]" />
+                    <span className="text-[10px] font-bold text-zinc-400 mt-1">{uploadingFoto ? "Uploading..." : "Upload Foto"}</span>
+                  </>
+                )}
+              </label>
               <p className="text-[11px] text-zinc-400 mt-3 text-center">Rekomendasi rasio 1:1 (Max 2MB)</p>
             </div>
 
@@ -157,9 +194,10 @@ export default function TambahKaryawanPage() {
                 <div className="relative">
                   <select className="w-full border border-zinc-200 rounded-xl p-3 pr-10 text-sm focus:border-[#AF520C] outline-none bg-white appearance-none cursor-pointer"
                     value={formData.pendidikanTerakhir} onChange={(e) => setFormData({...formData, pendidikanTerakhir: e.target.value})}>
-                    <option>SMA / SMK</option>
-                    <option>D3 / S1</option>
-                    <option>S2</option>
+                    <option value="" disabled hidden>Pilih Pendidikan</option>
+                    <option value="SMA / SMK">SMA / SMK</option>
+                    <option value="D3 / S1">D3 / S1</option>
+                    <option value="S2">S2</option>
                   </select>
                   <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                 </div>

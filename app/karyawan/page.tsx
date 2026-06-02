@@ -28,7 +28,7 @@ export default function KaryawanPage() {
   const fetchKaryawan = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/v1/admin/karyawan?limit=${itemsPerPage}&page=${currentPage}&search=${encodeURIComponent(debouncedSearch)}`);
+      const res = await fetch(`/api/v1/admin/karyawan?limit=${itemsPerPage}&page=${currentPage}&search=${encodeURIComponent(debouncedSearch)}&role=${encodeURIComponent(roleFilter)}&status=${encodeURIComponent(statusFilter)}`);
       const result = await res.json();
       if (res.ok && result.data) {
         setDummyKaryawan(
@@ -56,7 +56,7 @@ export default function KaryawanPage() {
 
   useEffect(() => {
     fetchKaryawan();
-  }, [currentPage, debouncedSearch]);
+  }, [currentPage, debouncedSearch, roleFilter, statusFilter]);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentData = dummyKaryawan; // Data dari API sudah dipotong
@@ -99,7 +99,7 @@ export default function KaryawanPage() {
           <select 
             className="w-full px-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C] appearance-none bg-white cursor-pointer"
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="Semua Role">Semua Role</option>
             <option value="Kasir">Kasir</option>
@@ -112,7 +112,7 @@ export default function KaryawanPage() {
           <select 
             className="w-full px-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C] appearance-none bg-white cursor-pointer"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="Status Aktif">Status Aktif</option>
             <option value="Semua Status">Semua Status</option>
