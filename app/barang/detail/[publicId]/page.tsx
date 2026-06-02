@@ -8,15 +8,15 @@ export default function DetailBarangPage() {
   const params = useParams();
   const router = useRouter();
   
-  // 🚀 1. FIX: Tangkap sesuai nama folder [publicId]
-  const publicId = params.publicId; 
+  // 🚀 Tangkap sesuai nama folder [publicId]
+  const publicId = params?.publicId as string; 
 
   // STATE DETAIL DATA FROM DB GOLANG
   const [barang, setBarang] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // 🚀 2. FIX: Fetch data menggunakan publicId ke endpoint detail yang bener
+  // 🚀 Fetch data menggunakan publicId ke endpoint detail
   useEffect(() => {
     if (!publicId) return;
 
@@ -26,7 +26,7 @@ export default function DetailBarangPage() {
         const json = await res.json();
         
         if (res.ok && json.data) {
-          setBarang(json.data); // Data riil Postman masuk ke sini
+          setBarang(json.data); // Data riil masuk ke sini
         } else {
           setErrorMsg("Gagal memuat detail produk dari database.");
         }
@@ -118,6 +118,15 @@ export default function DetailBarangPage() {
                 <p className="text-sm font-semibold text-zinc-800 bg-zinc-50 p-3 rounded-lg border border-zinc-100">{barang.nama_barang}</p>
               </div>
               
+              {/* 🔥 BONUS KAK GEM: Nampilin Harga Beli / Modal */}
+              <div>
+                <span className="text-xs font-bold text-zinc-400 block mb-1 uppercase tracking-wider">Harga Beli</span>
+                <p className="text-sm font-semibold text-zinc-800 bg-zinc-50 p-3 rounded-lg border border-zinc-100 flex items-center gap-1.5">
+                  <Coins size={16} className="text-[#AF520C]" />
+                  {formatRupiah(barang.harga_beli)}
+                </p>
+              </div>
+
               <div>
                 <span className="text-xs font-bold text-zinc-400 block mb-1 uppercase tracking-wider">Kategori</span>
                 <p className="text-sm font-semibold text-zinc-800 bg-zinc-50 p-3 rounded-lg border border-zinc-100 flex items-center gap-1.5 capitalize">
@@ -136,7 +145,7 @@ export default function DetailBarangPage() {
 
               {/* TAMPILAN DISKON AKTIF (JIKA ADA) */}
               {barang.diskon && (
-                <div>
+                <div className="md:col-span-2">
                   <span className="text-xs font-bold text-red-500 block mb-1 uppercase tracking-wider">Promo Diskon Aktif</span>
                   <p className="text-sm font-bold text-red-600 bg-red-50 p-3 rounded-lg border border-red-100 flex items-center gap-1.5">
                     <Percent size={16} />
@@ -154,7 +163,7 @@ export default function DetailBarangPage() {
             </div>
           </div>
 
-          {/* 🚀 3. FIX: PEMETAAN VARIAN (Disesuaikan dengan key 'varian' dari Golang) */}
+          {/* PEMETAAN VARIAN */}
           <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
             <h2 className="text-base font-bold text-zinc-800 mb-6 flex items-center gap-2 border-b border-zinc-100 pb-3">
               <Package size={18} className="text-[#AF520C]" />
@@ -173,11 +182,11 @@ export default function DetailBarangPage() {
                           Varian #{index + 1}
                         </span>
                         <div className="flex gap-4 text-xs font-semibold text-zinc-500">
-                          <span>Stok: <strong className="text-zinc-800">{item.stok || 0}</strong></span>
+                          <span>Stok Fisik: <strong className="text-zinc-800">{item.stok || 0} {barang.satuan || "Pcs"}</strong></span>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div>
                           <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Nama Atribut</span>
                           <p className="text-sm font-bold text-zinc-800 capitalize">{item.nama_spesifikasi || "-"}</p>
@@ -187,11 +196,7 @@ export default function DetailBarangPage() {
                           <p className="text-sm font-medium text-zinc-700 capitalize">{item.nama_detail || "-"}</p>
                         </div>
                         <div>
-                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Stok Fisik</span>
-                          <p className="text-sm font-bold text-zinc-800">{item.stok || 0} {barang.satuan || "Pcs"}</p>
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Harga Jual</span>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Harga Jual Dasar</span>
                           <div className="text-sm">
                             {barang.diskon ? (
                               <>
@@ -209,7 +214,7 @@ export default function DetailBarangPage() {
                     {/* Daftar Barcode per Varian */}
                     <div className="p-4 border-t border-zinc-100 bg-white">
                       <span className="text-xs font-bold text-zinc-500 mb-3 flex items-center gap-1.5 uppercase tracking-wider">
-                        <Barcode size={14} className="text-[#AF520C]" /> Daftar Barcode
+                        <Barcode size={14} className="text-[#AF520C]" /> Pemetaan Barcode / SKU
                       </span>
                       {item.barcodes && item.barcodes.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -220,11 +225,12 @@ export default function DetailBarangPage() {
                                   <Barcode size={16} className="text-zinc-700" />
                                 </div>
                                 <span className="font-mono text-sm font-bold text-zinc-800 tracking-wider">
-                                  {bc.id_barcode}
+                                  {/* 🚀 FIX: Ganti id_barcode menjadi kode_barcode! */}
+                                  {bc.kode_barcode || "-"}
                                 </span>
                               </div>
                               <div className="text-xs font-semibold text-zinc-500 bg-white px-2 py-1 rounded border border-zinc-200">
-                                Isi: <span className="text-zinc-800 font-bold">{bc.kuantitas}</span>
+                                Isi (Qty): <span className="text-zinc-800 font-bold">{bc.kuantitas}</span>
                               </div>
                             </div>
                           ))}
