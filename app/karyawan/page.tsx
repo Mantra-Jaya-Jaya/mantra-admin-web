@@ -1,33 +1,65 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function KaryawanPage() {
-  // State untuk filter pencarian (persiapan buat disambung ke API nanti)
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("Semua Role");
   const [statusFilter, setStatusFilter] = useState("Status Aktif");
 
-  // Data Dummy Karyawan (Role dibatasi Kasir & Kurir)
-  const dummyKaryawan = [
-    { id: 1, nama: "Budi Kusuma", email: "budi@mantrapos.com", role: "Kasir", terakhirLogin: "12 Oct 2023, 14:30", status: "Aktif", inisial: "BK" },
-    { id: 2, nama: "Siti Aminah", email: "siti@mantrapos.com", role: "Kurir", terakhirLogin: "12 Oct 2023, 11:15", status: "Aktif", inisial: "SA" },
-    { id: 3, nama: "Riztika Amelia", email: "riztika@mantrapos.com", role: "Kasir", terakhirLogin: "11 Oct 2023, 09:00", status: "Aktif", inisial: "RA" },
-    { id: 4, nama: "Rafa Ahmad", email: "rafa@mantrapos.com", role: "Kurir", terakhirLogin: "10 Oct 2023, 18:20", status: "Nonaktif", inisial: "RA" },
-    { id: 5, nama: "King Arthur", email: "king@mantrapos.com", role: "Kasir", terakhirLogin: "09 Oct 2023, 08:30", status: "Aktif", inisial: "KA" },
-    { id: 6, nama: "Nabila Syalwa", email: "nabila@mantrapos.com", role: "Kasir", terakhirLogin: "08 Oct 2023, 16:45", status: "Aktif", inisial: "NS" },
-  ];
-
+  const [dummyKaryawan, setDummyKaryawan] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5; // Kita batasin 1 halaman tampil 5 orang aja
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 5;
 
-  // Menghitung total halaman (6 orang / 5 = 2 halaman)
-  const totalPages = Math.ceil(dummyKaryawan.length / itemsPerPage);
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // Reset page ke 1 kalau cari baru
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  // Memotong data asli biar yang tampil cuma 5 baris sesuai halaman aktif
+  const fetchKaryawan = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/v1/admin/karyawan?limit=${itemsPerPage}&page=${currentPage}&search=${encodeURIComponent(debouncedSearch)}&role=${encodeURIComponent(roleFilter)}&status=${encodeURIComponent(statusFilter)}`);
+      const result = await res.json();
+      if (res.ok && result.data) {
+        setDummyKaryawan(
+          result.data.map((item: any) => ({
+            id: item.public_id,
+            nama: item.nama_lengkap,
+            email: item.email,
+            role: item.role,
+            terakhirLogin: item.terakhir_login,
+            status: item.status,
+            inisial: item.inisial
+          }))
+        );
+        if (result.meta) {
+          setTotalPages(result.meta.total_pages || 1);
+          setTotalItems(result.meta.total || 0);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal ambil data karyawan", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKaryawan();
+  }, [currentPage, debouncedSearch, roleFilter, statusFilter]);
+
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentData = dummyKaryawan.slice(startIndex, startIndex + itemsPerPage);
+  const currentData = dummyKaryawan; // Data dari API sudah dipotong
 
   return (
     <div className="w-full pb-12">
@@ -67,7 +99,7 @@ export default function KaryawanPage() {
           <select 
             className="w-full px-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C] appearance-none bg-white cursor-pointer"
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="Semua Role">Semua Role</option>
             <option value="Kasir">Kasir</option>
@@ -80,7 +112,7 @@ export default function KaryawanPage() {
           <select 
             className="w-full px-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C] appearance-none bg-white cursor-pointer"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="Status Aktif">Status Aktif</option>
             <option value="Semua Status">Semua Status</option>
@@ -141,12 +173,21 @@ export default function KaryawanPage() {
                   {/* Kolom Action */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <button className="text-zinc-400 hover:text-red-500 transition" title="Hapus">
+                      <button 
+                        className="text-zinc-400 hover:text-red-500 transition" 
+                        title="Hapus"
+                        onClick={async () => {
+                          if (confirm(`Hapus karyawan ${user.nama}?`)) {
+                            const res = await fetch(`/api/v1/admin/karyawan/${user.id}`, { method: "DELETE" });
+                            if (res.ok) fetchKaryawan();
+                          }
+                        }}
+                      >
                         <Trash2 size={18} />
                       </button>
-                      <button className="text-zinc-400 hover:text-blue-500 transition" title="Edit">
+                      <Link href={`/karyawan/edit/${user.id}`} className="text-zinc-400 hover:text-blue-500 transition" title="Edit">
                         <Edit2 size={18} />
-                      </button>
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -158,7 +199,7 @@ export default function KaryawanPage() {
         {/* PAGINATION */}
         <div className="px-6 py-4 border-t border-zinc-200 flex items-center justify-between bg-white">
           <p className="text-sm text-zinc-500">
-            Menampilkan {startIndex + 1} hingga {Math.min(startIndex + itemsPerPage, dummyKaryawan.length)} dari {dummyKaryawan.length} karyawan
+            Menampilkan {totalItems === 0 ? 0 : startIndex + 1} hingga {startIndex + currentData.length} dari {totalItems} karyawan
           </p>
           
           {/* Cuma tampil kalau halamannya lebih dari 1 */}

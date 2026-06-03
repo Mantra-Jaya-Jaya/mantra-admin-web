@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { 
   CloudUpload, ChevronRight, User, Phone, Mail, Lock, 
@@ -10,35 +10,133 @@ import {
 
 export default function EditKaryawanPage() {
   const router = useRouter();
+  const params = useParams();
+  const publicId = params.publicId;
+
   const [loading, setLoading] = useState(false);
   
-  // Data Dummy (Nantinya dapet dari API berdasarkan ID)
   const [role, setRole] = useState("Kasir");
   const [shift, setShift] = useState("Siang");
   const [status, setStatus] = useState("Aktif");
   const [showPassword, setShowPassword] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // State Foto
+  const [fotoProfil, setFotoProfil] = useState<string>("");
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+
+  const [dibuatPada, setDibuatPada] = useState("");
+  const [loginTerakhir, setLoginTerakhir] = useState("");
 
   const [formData, setFormData] = useState({
-    nama: "Siti Aminah",
-    noTelp: "81234567890",
-    email: "siti.aminah@mantra.com",
-    nik: "3275001234567890",
-    tempatLahir: "Jakarta",
-    tglLahir: "1995-05-15",
+    nama: "",
+    noTelp: "",
+    email: "",
+    password: "",
+    nik: "",
+    tempatLahir: "",
+    tglLahir: "",
     gender: "Wanita",
     pendidikan: "D3 / S1",
-    alamat: "Jl. Merdeka No. 123, Kebayoran Baru, Jakarta Selatan, 12110"
+    alamat: ""
   });
+
+  useEffect(() => {
+    if (!publicId) return;
+    const fetchDetail = async () => {
+      try {
+        const res = await fetch(`/api/v1/admin/karyawan/${publicId}`);
+        const result = await res.json();
+        if (res.ok && result.data) {
+          const d = result.data;
+          setRole(d.role || "Kasir");
+          setShift(d.shift || "Siang");
+          setStatus(d.status || "Aktif");
+          setFotoProfil(d.foto_profil || "");
+          setDibuatPada(d.dibuat_pada || "Tidak tersedia");
+          setLoginTerakhir(d.login_terakhir || "Belum pernah");
+          setFormData({
+            nama: d.nama_lengkap || "",
+            noTelp: d.no_telp || "",
+            email: d.email || "",
+            password: "",
+            nik: d.nik || "",
+            tempatLahir: d.tempat_lahir || "",
+            tglLahir: d.tanggal_lahir ? d.tanggal_lahir.split('T')[0] : "",
+            gender: d.jenis_kelamin || "Wanita",
+            pendidikan: d.pendidikan_terakhir || "D3 / S1",
+            alamat: d.alamat || ""
+          });
+        }
+      } catch (e) {
+        console.error("Gagal fetch data", e);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [publicId]);
+
+  const handleUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const data = new FormData();
+    data.append("foto", file);
+
+    setUploadingFoto(true);
+    try {
+      const res = await fetch("/api/v1/admin/karyawan/upload", {
+        method: "POST",
+        body: data,
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setFotoProfil(result.url);
+      } else {
+        alert(result.message || "Gagal upload foto");
+      }
+    } catch (err) {
+      alert("Error jaringan saat upload");
+    } finally {
+      setUploadingFoto(false);
+    }
+  };
 
   const handleSimpan = async () => {
     setLoading(true);
-    // Logic update ke API Golang temen lu
-    console.log("Update Data:", { ...formData, role, shift, status });
-    
-    setTimeout(() => {
+    const payload = {
+      nama_lengkap: formData.nama,
+      no_telp: formData.noTelp,
+      email: formData.email,
+      password: formData.password || undefined,
+      nik: formData.nik,
+      tempat_lahir: formData.tempatLahir,
+      tanggal_lahir: formData.tglLahir,
+      jenis_kelamin: formData.gender,
+      pendidikan_terakhir: formData.pendidikan,
+      alamat: formData.alamat,
+      status: status,
+      shift: role === "Kasir" ? shift : "",
+      foto_profil: fotoProfil
+    };
+
+    try {
+      const res = await fetch(`/api/v1/admin/karyawan/${publicId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        router.push("/karyawan");
+      } else {
+        const err = await res.json();
+        alert(err.message || "Gagal menyimpan");
+      }
+    } catch (e) {
+      alert("Error jaringan");
+    } finally {
       setLoading(false);
-      router.push("/karyawan");
-    }, 1000);
+    }
   };
 
   return (
@@ -81,9 +179,14 @@ export default function EditKaryawanPage() {
             
             {/* Foto Profil */}
             <div className="flex flex-col items-center mb-8">
-              <div className="relative group">
+              <label className="relative group cursor-pointer">
+                <input type="file" className="hidden" accept="image/*" onChange={handleUploadFoto} disabled={uploadingFoto} />
                 <div className="w-32 h-32 rounded-3xl border-4 border-orange-50 overflow-hidden shadow-inner bg-zinc-100 relative z-0">
-                  <img src={`https://ui-avatars.com/api/?name=${formData.nama}&background=AF520C&color=fff&size=128`} alt="Profile" className="w-full h-full object-cover" />
+                  {fotoProfil ? (
+                    <img src={fotoProfil} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={`https://ui-avatars.com/api/?name=${formData.nama || 'User'}&background=AF520C&color=fff&size=128`} alt="Profile" className="w-full h-full object-cover" />
+                  )}
                   
                   {/* Overlay Blur kalau status Nonaktif biar kerasa estetik mati suri */}
                   {status === "Nonaktif" && (
@@ -91,11 +194,17 @@ export default function EditKaryawanPage() {
                        <EyeOff size={32} className="text-zinc-400" />
                     </div>
                   )}
+                  
+                  {uploadingFoto && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs font-bold">
+                       Uploading...
+                    </div>
+                  )}
                 </div>
-                <button className="absolute -right-2 -bottom-2 bg-[#AF520C] text-white p-2 rounded-xl shadow-lg border-4 border-white hover:scale-110 transition z-10">
+                <div className="absolute -right-2 -bottom-2 bg-[#AF520C] text-white p-2 rounded-xl shadow-lg border-4 border-white hover:scale-110 transition z-10 flex items-center justify-center">
                   <CloudUpload size={16} />
-                </button>
-              </div>
+                </div>
+              </label>
               <p className="text-[10px] font-bold text-zinc-400 mt-4 uppercase tracking-tighter">Click icon to upload new photo</p>
             </div>
 
@@ -160,9 +269,10 @@ export default function EditKaryawanPage() {
                 <label className="text-xs font-bold text-zinc-500 mb-2 block uppercase tracking-wider">Pendidikan Terakhir</label>
                 <div className="relative">
                   <select value={formData.pendidikan} onChange={(e) => setFormData({...formData, pendidikan: e.target.value})} className="w-full border border-zinc-200 rounded-xl p-3 pr-10 text-sm focus:border-[#AF520C] outline-none bg-white appearance-none cursor-pointer">
-                    <option>SMA / SMK</option>
-                    <option>D3 / Diploma</option>
-                    <option>S1 / Sarjana</option>
+                    <option value="" disabled hidden>Pilih Pendidikan</option>
+                    <option value="SMA / SMK">SMA / SMK</option>
+                    <option value="D3 / Diploma">D3 / Diploma</option>
+                    <option value="S1 / Sarjana">S1 / Sarjana</option>
                   </select>
                   <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                 </div>
@@ -225,7 +335,7 @@ export default function EditKaryawanPage() {
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Dibuat Pada</p>
-                  <p className="text-sm font-bold text-zinc-700">12 Jan 2024, 10:45 AM</p>
+                  <p className="text-sm font-bold text-zinc-700">{dibuatPada}</p>
                 </div>
               </div>
               <div className="bg-zinc-50 p-4 rounded-xl flex items-center gap-4">
@@ -234,7 +344,7 @@ export default function EditKaryawanPage() {
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Login Terakhir</p>
-                  <p className="text-sm font-bold text-zinc-700">24 Mar 2024, 08:30 PM</p>
+                  <p className="text-sm font-bold text-zinc-700">{loginTerakhir}</p>
                 </div>
               </div>
             </div>
