@@ -7,7 +7,7 @@ export default function KaryawanPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("Semua Role");
-  const [statusFilter, setStatusFilter] = useState("Status Aktif");
+  const [statusFilter, setStatusFilter] = useState("Aktif");
 
   const [dummyKaryawan, setDummyKaryawan] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +114,7 @@ export default function KaryawanPage() {
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
-            <option value="Status Aktif">Status Aktif</option>
+            <option value="Aktif">Status Aktif</option>
             <option value="Semua Status">Semua Status</option>
             <option value="Nonaktif">Nonaktif</option>
           </select>
