@@ -54,10 +54,20 @@ export default function TambahKaryawanPage() {
     setLoading(true);
     // Simulasi Payload buat temen backend lu
     const payload = {
-      ...formData,
+      nama_lengkap: formData.nama,
+      no_telp: formData.noTelp,
+      email: formData.email,
+      password: formData.password,
+      username: formData.username,
+      nik: formData.nik,
+      tempat_lahir: formData.tempatLahir,
+      tanggal_lahir: formData.tanggalLahir,
+      jenis_kelamin: formData.jenisKelamin,
+      pendidikan_terakhir: formData.pendidikanTerakhir,
+      alamat: formData.alamat,
       foto_profil: fotoProfil,
       role: role,
-      shift: role === "Kasir" ? shift : null // Shift null kalau Kurir
+      shift: role === "Kasir" ? shift : null
     };
     
     console.log("Kirim ke Golang:", payload);
