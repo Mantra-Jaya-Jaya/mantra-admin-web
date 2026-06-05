@@ -39,7 +39,8 @@ export default function KaryawanPage() {
             role: item.role,
             terakhirLogin: item.terakhir_login,
             status: item.status,
-            inisial: item.inisial
+            inisial: item.inisial,
+            fotoProfil: item.foto_profil
           }))
         );
         if (result.meta) {
@@ -140,8 +141,12 @@ export default function KaryawanPage() {
                   {/* Kolom User (Foto + Nama + Email) */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-sm shrink-0">
-                        {user.inisial}
+                      <div className="w-10 h-10 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-sm shrink-0 overflow-hidden">
+                        {user.fotoProfil ? (
+                          <img src={user.fotoProfil} alt={user.nama} className="w-full h-full object-cover" />
+                        ) : (
+                          user.inisial
+                        )}
                       </div>
                       <div>
                         <p className="font-bold text-sm text-zinc-800">{user.nama}</p>
