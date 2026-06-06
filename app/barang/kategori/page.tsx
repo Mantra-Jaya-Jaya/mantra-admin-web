@@ -13,7 +13,7 @@ export default function TambahKategoriPage() {
   const [errorMsg, setErrorMsg] = useState("");
 
   // STATE FORM (TAMBAH / EDIT)
-  const [editingId, setEditingId] = useState<number | null>(null); 
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [namaKategori, setNamaKategori] = useState("");
   const [fileIcon, setFileIcon] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -24,7 +24,7 @@ export default function TambahKategoriPage() {
 
   // STATE CUSTOM MODAL DELETE
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [kategoriToDelete, setKategoriToDelete] = useState<number | null>(null);
+  const [kategoriToDelete, setKategoriToDelete] = useState<string | null>(null);
 
   // 🚀 1. FETCH DATA KATEGORI
   const fetchKategori = async () => {
@@ -72,7 +72,7 @@ export default function TambahKategoriPage() {
 
   // 🔥 3. HANDLER KLIK TOMBOL EDIT
   const handleEditClick = (item: any) => {
-    setEditingId(item.id_kategori || item.id);
+    setEditingId(item.public_id || item.id_kategori || item.id);
     setNamaKategori(item.nama_kategori);
     setPreviewUrl(item.icon_kategori || "");
     setFileIcon(null); // Kosongin file baru, pake preview URL lama
@@ -154,7 +154,7 @@ export default function TambahKategoriPage() {
   };
 
   // 🚀 6. LOGIC MODAL DELETE CUSTOM
-  const triggerDelete = (id: number) => {
+  const triggerDelete = (id: string) => {
     setKategoriToDelete(id);
     setShowDeleteModal(true);
   };
@@ -354,7 +354,7 @@ export default function TambahKategoriPage() {
                 </div>
               ) : kategoriList.length > 0 ? (
                 kategoriList.map((item) => {
-                  const itemId = item.id_kategori || item.id;
+                  const itemId = item.public_id || item.id_kategori || item.id;
                   const isCurrentlyEditing = editingId === itemId;
 
                   return (

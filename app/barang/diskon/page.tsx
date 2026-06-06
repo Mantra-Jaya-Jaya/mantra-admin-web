@@ -27,7 +27,7 @@ export default function KelolaDiskonPage() {
 
   // STATE CUSTOM MODAL DELETE
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [diskonToDelete, setDiskonToDelete] = useState<number | null>(null);
+  const [diskonToDelete, setDiskonToDelete] = useState<string | null>(null);
 
   // 🚀 1. FETCH DATA DISKON
   const fetchDiskon = async () => {
@@ -132,7 +132,7 @@ export default function KelolaDiskonPage() {
   };
 
   // 🚀 4. LOGIC MODAL DELETE CUSTOM
-  const triggerDelete = (id: number) => {
+  const triggerDelete = (id: string) => {
     setDiskonToDelete(id);
     setShowDeleteModal(true);
   };
@@ -338,7 +338,7 @@ export default function KelolaDiskonPage() {
                 </div>
               ) : diskonList.length > 0 ? (
                 diskonList.map((item) => (
-                  <div key={item.id_diskon} className="flex flex-col border border-zinc-100 rounded-xl overflow-hidden hover:border-[#AF520C]/30 hover:shadow-md transition group bg-white shrink-0">
+                  <div key={item.public_id || item.id_diskon} className="flex flex-col border border-zinc-100 rounded-xl overflow-hidden hover:border-[#AF520C]/30 hover:shadow-md transition group bg-white shrink-0">
                     
                     {/* BAGIAN ATAS: BANNER ATAU PLACEHOLDER */}
                     <div className="w-full h-24 bg-zinc-100 relative border-b border-zinc-100">
@@ -378,7 +378,7 @@ export default function KelolaDiskonPage() {
                         </p>
                       </div>
                       <button 
-                        onClick={() => triggerDelete(item.id_diskon)}
+                        onClick={() => triggerDelete(item.public_id || item.id_diskon)}
                         className="text-zinc-400 hover:text-[#AF520C] bg-zinc-50 p-2 rounded-lg border border-zinc-200 hover:border-[#AF520C]/30 hover:bg-orange-50 transition-all"
                         title="Hapus Promo"
                       >
