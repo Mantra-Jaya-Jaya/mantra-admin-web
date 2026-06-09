@@ -51,8 +51,11 @@ export default function Home() {
   }
 
   const formatRupiah = (angka: number) => {
+    if (angka >= 1000000000) {
+      return `Rp ${(angka / 1000000000).toFixed(1)}M`;
+    }
     if (angka >= 1000000) {
-      return `Rp ${(angka / 1000000).toFixed(1)}M`;
+      return `Rp ${(angka / 1000000).toFixed(1)}Jt`;
     }
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
