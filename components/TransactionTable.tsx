@@ -43,6 +43,7 @@ export default function TransactionTable({ data }: { data: any[] }) {
       <table className="w-full text-left">
         <thead className="bg-[#f8fafc] text-zinc-500 text-xs font-bold uppercase tracking-wider">
           <tr>
+            <th className="px-6 py-4">No</th>
             <th className="px-6 py-4">ID Transaksi</th>
             <th className="px-6 py-4">Kasir</th>
             <th className="px-6 py-4">Pelanggan</th>
@@ -52,8 +53,9 @@ export default function TransactionTable({ data }: { data: any[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100 text-sm text-zinc-700">
-          {currentData.map((trx) => (
+          {currentData.map((trx, index) => (
             <tr key={trx.id} className="hover:bg-zinc-50 transition">
+              <td className="px-6 py-4 text-zinc-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
               <td className="px-6 py-4 font-bold">{trx.id}</td>
               <td className="px-6 py-4">{trx.kasir}</td>
               <td className="px-6 py-4">{trx.pelanggan}</td>
