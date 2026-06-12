@@ -54,6 +54,9 @@ export default function Navbar() {
           <Link href="/karyawan" className={`pb-1 transition ${pathname === '/karyawan' ? 'text-[#AF520C] border-b-2 border-[#AF520C]' : 'hover:text-zinc-800'}`}>
             Karyawan
           </Link>
+          <Link href="/ekspedisi" className={`pb-1 transition ${pathname === '/ekspedisi' || pathname.startsWith('/ekspedisi/') ? 'text-[#AF520C] border-b-2 border-[#AF520C]' : 'hover:text-zinc-800'}`}>
+            Ekspedisi
+          </Link>
         </div>
         
         <div className="flex items-center gap-4 border-l border-zinc-200 pl-6">
