@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { Search } from 'lucide-react';
-import { getBadgeClassFromName, getDotColorFromName } from '@/constants/status';
+import { getBadgeClassFromName, getDotColorFromName } from '@/lib/constants/status';
 
 export default function TransactionTable({ data }: { data: any[] }) {
   const [searchTerm, setSearchTerm] = useState('');

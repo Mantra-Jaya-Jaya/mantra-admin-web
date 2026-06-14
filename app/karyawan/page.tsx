@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 
 export default function KaryawanPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,23 +82,25 @@ export default function KaryawanPage() {
       </div>
 
       {/* FILTER BAR (Putih melengkung kayak di desain lu) */}
-      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col md:flex-row gap-4 mb-6">
+      {/* FILTER BAR */}
+      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col sm:flex-row gap-4 mb-6">
         {/* Search */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input 
             type="text" 
-            placeholder="Cari nama atau email karyawan..." // Kak Gem benerin copy-paste lu wkwk
-            className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C]"
+            spellCheck="false"
+            placeholder="Cari nama atau email karyawan..."
+            className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-[#AF520C]"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         {/* Dropdown Role */}
-        <div className="w-full md:w-48">
+        <div className="relative">
           <select 
-            className="w-full px-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C] appearance-none bg-white cursor-pointer"
+            className="appearance-none bg-white border border-zinc-200 text-zinc-700 text-sm rounded-lg pl-4 pr-10 py-2 outline-none cursor-pointer hover:bg-zinc-50 focus:border-[#AF520C]"
             value={roleFilter}
             onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
           >
@@ -106,12 +108,13 @@ export default function KaryawanPage() {
             <option value="Kasir">Kasir</option>
             <option value="Kurir">Kurir</option>
           </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
         </div>
 
         {/* Dropdown Status */}
-        <div className="w-full md:w-48">
+        <div className="relative">
           <select 
-            className="w-full px-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C] appearance-none bg-white cursor-pointer"
+            className="appearance-none bg-white border border-zinc-200 text-zinc-700 text-sm rounded-lg pl-4 pr-10 py-2 outline-none cursor-pointer hover:bg-zinc-50 focus:border-[#AF520C]"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
@@ -119,6 +122,7 @@ export default function KaryawanPage() {
             <option value="Semua Status">Semua Status</option>
             <option value="Nonaktif">Nonaktif</option>
           </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
         </div>
       </div>
 
@@ -126,20 +130,20 @@ export default function KaryawanPage() {
       <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-zinc-50 border-b border-zinc-200">
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Terakhir Login</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th>
+            <thead className="bg-[#f8fafc] text-zinc-600 text-xs font-bold uppercase tracking-wider border-b border-zinc-200">
+              <tr>
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Terakhir Login</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-zinc-100 text-sm text-zinc-800">
               {currentData.map((user) => (
                 <tr key={user.id} className="hover:bg-orange-50/30 transition">
                   {/* Kolom User (Foto + Nama + Email) */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-sm shrink-0 overflow-hidden">
                         {user.fotoProfil ? (
@@ -156,17 +160,17 @@ export default function KaryawanPage() {
                   </td>
                   
                   {/* Kolom Role */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <span className="text-sm font-semibold text-zinc-700">{user.role}</span>
                   </td>
                   
                   {/* Kolom Terakhir Login */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <span className="text-sm text-zinc-500">{user.terakhirLogin}</span>
                   </td>
                   
                   {/* Kolom Status (Badge) */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                       user.status === "Aktif" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
                     }`}>
@@ -176,7 +180,7 @@ export default function KaryawanPage() {
                   </td>
                   
                   {/* Kolom Action */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <div className="flex items-center gap-3">
                       <button 
                         className="text-zinc-400 hover:text-red-500 transition" 

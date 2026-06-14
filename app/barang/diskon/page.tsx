@@ -101,6 +101,7 @@ export default function KelolaDiskonPage() {
 
       const payload = {
         nama_diskon: namaDiskon,
+        tipe_diskon: tipeDiskon,
         besar_diskon: parseInt(besarDiskon),
         banner_diskon: bannerUrl,
         tgl_mulai: tglMulai,
@@ -114,7 +115,10 @@ export default function KelolaDiskonPage() {
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Gagal menyimpan promo diskon.");
+      if (!res.ok) {
+        const detailError = json.error ? `: ${json.error}` : "";
+        throw new Error((json.message || "Gagal menyimpan promo diskon.") + detailError);
+      }
 
       setNamaDiskon("");
       setBesarDiskon("");
