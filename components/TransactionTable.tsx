@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { Search } from 'lucide-react';
+import { getBadgeClassFromName, getDotColorFromName } from '@/constants/status';
 
 export default function TransactionTable({ data }: { data: any[] }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,14 +63,8 @@ export default function TransactionTable({ data }: { data: any[] }) {
               <td className="px-6 py-4 text-zinc-400">{trx.tanggal}</td>
               <td className="px-6 py-4 font-semibold">{trx.total}</td>
               <td className="px-6 py-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 w-fit ${
-                  trx.status === 'Selesai' ? 'bg-green-50 text-green-600' : 
-                  trx.status === 'Proses' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    trx.status === 'Selesai' ? 'bg-green-600' : 
-                    trx.status === 'Proses' ? 'bg-orange-600' : 'bg-red-600'
-                  }`}></span>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 w-fit ${getBadgeClassFromName(trx.status)}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${getDotColorFromName(trx.status)}`}></span>
                   {trx.status}
                 </span>
               </td>

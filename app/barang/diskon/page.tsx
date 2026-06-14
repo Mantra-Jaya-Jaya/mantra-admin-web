@@ -14,6 +14,7 @@ export default function KelolaDiskonPage() {
 
   // STATE FORM TAMBAH DISKON
   const [namaDiskon, setNamaDiskon] = useState("");
+  const [tipeDiskon, setTipeDiskon] = useState("persen"); // "persen" atau "nominal"
   const [besarDiskon, setBesarDiskon] = useState("");
   const [tglMulai, setTglMulai] = useState("");
   const [tglSelesai, setTglSelesai] = useState("");
@@ -255,33 +256,51 @@ export default function KelolaDiskonPage() {
                 </label>
               </div>
 
-              {/* INPUT NAMA & BESAR DISKON */}
+              {/* INPUT NAMA, TIPE & BESAR DISKON */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2">
+                <div className="md:col-span-1">
                   <label className="text-sm font-bold text-zinc-600 mb-2 flex items-center gap-2">
                     <Tag size={16} className="text-zinc-400" /> Nama Promo
                   </label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="Cth: Merdeka Sale 2026" 
-                    className="w-full border border-zinc-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#AF520C]" 
+                  <input
+                    type="text"
+                    required
+                    placeholder="Cth: Merdeka Sale 2026"
+                    className="w-full border border-zinc-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#AF520C]"
                     value={namaDiskon}
                     onChange={(e) => setNamaDiskon(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-zinc-600 mb-2 block">Potongan (%)</label>
+                  <label className="text-sm font-bold text-zinc-600 mb-2 block">Tipe Diskon</label>
+                  <select
+                    required
+                    className="w-full border border-zinc-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#AF520C] bg-white"
+                    value={tipeDiskon}
+                    onChange={(e) => setTipeDiskon(e.target.value)}
+                  >
+                    <option value="persen">Persentase (%)</option>
+                    <option value="nominal">Nominal (Rp)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-zinc-600 mb-2 block">
+                    {tipeDiskon === "persen" ? "Potongan (%)" : "Potongan (Rp)"}
+                  </label>
                   <div className="relative">
-                    <input 
-                      type="number" 
-                      required min="1" max="100"
-                      placeholder="0" 
-                      className="w-full border border-zinc-200 rounded-lg p-3 pr-8 text-sm focus:outline-none focus:border-[#AF520C]" 
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      max={tipeDiskon === "persen" ? "100" : undefined}
+                      placeholder="0"
+                      className="w-full border border-zinc-200 rounded-lg p-3 pr-8 text-sm focus:outline-none focus:border-[#AF520C]"
                       value={besarDiskon}
                       onChange={(e) => setBesarDiskon(e.target.value)}
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">%</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">
+                      {tipeDiskon === "persen" ? "%" : "Rp"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -363,9 +382,9 @@ export default function KelolaDiskonPage() {
                         )}
                       </div>
                       
-                      {/* BADGE PERSENTASE */}
+                      {/* BADGE DISKON */}
                       <div className="absolute top-2 right-2 bg-[#AF520C] text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
-                        {item.besar_diskon}% OFF
+                        {item.tipe_diskon === 'persen' ? `${item.besar_diskon}% OFF` : `Rp ${item.besar_diskon.toLocaleString('id-ID')}`}
                       </div>
                     </div>
 
