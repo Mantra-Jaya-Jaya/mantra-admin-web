@@ -72,7 +72,7 @@ export default function TambahKategoriPage() {
 
   // 🔥 3. HANDLER KLIK TOMBOL EDIT
   const handleEditClick = (item: any) => {
-    setEditingId(item.public_id || item.id_kategori || item.id);
+    setEditingId(item.public_id);
     setNamaKategori(item.nama_kategori);
     setPreviewUrl(item.icon_kategori || "");
     setFileIcon(null); // Kosongin file baru, pake preview URL lama
@@ -354,7 +354,7 @@ export default function TambahKategoriPage() {
                 </div>
               ) : kategoriList.length > 0 ? (
                 kategoriList.map((item) => {
-                  const itemId = item.public_id || item.id_kategori || item.id;
+                  const itemId = item.public_id;
                   const isCurrentlyEditing = editingId === itemId;
 
                   return (
