@@ -63,6 +63,9 @@ export default function Navbar() {
           <Link href="/karyawan" className={`pb-1 transition ${pathname === '/karyawan' ? 'text-[#AF520C] border-b-2 border-[#AF520C]' : 'hover:text-zinc-800'}`}>
             Karyawan
           </Link>
+          <Link href="/pengantaran" className={`pb-1 transition ${pathname === '/pengantaran' || pathname.startsWith('/pengantaran/') ? 'text-[#AF520C] border-b-2 border-[#AF520C]' : 'hover:text-zinc-800'}`}>
+            Pengantaran
+          </Link>
           <Link href="/ekspedisi" className={`pb-1 transition ${pathname === '/ekspedisi' || pathname.startsWith('/ekspedisi/') ? 'text-[#AF520C] border-b-2 border-[#AF520C]' : 'hover:text-zinc-800'}`}>
             Ekspedisi
           </Link>

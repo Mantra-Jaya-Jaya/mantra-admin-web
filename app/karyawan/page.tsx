@@ -1,13 +1,52 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, ChevronDown, Settings, Save } from "lucide-react";
 
 export default function KaryawanPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("Semua Role");
   const [statusFilter, setStatusFilter] = useState("Aktif");
+
+  // Pengaturan
+  const [showPengaturan, setShowPengaturan] = useState(false);
+  const [radius, setRadius] = useState("5");
+  const [savingRadius, setSavingRadius] = useState(false);
+  const [radiusMessage, setRadiusMessage] = useState("");
+
+  useEffect(() => {
+    fetch("/api/v1/admin/pengaturan")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.data?.radius_kurir_internal) {
+          setRadius(json.data.radius_kurir_internal);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveRadius = async () => {
+    setSavingRadius(true);
+    setRadiusMessage("");
+    try {
+      const res = await fetch("/api/v1/admin/pengaturan", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "radius_kurir_internal", value: radius }),
+      });
+      const json = await res.json();
+      if (json.status === "success") {
+        setRadiusMessage("Pengaturan berhasil disimpan!");
+      } else {
+        setRadiusMessage("Gagal: " + (json.message || "Unknown error"));
+      }
+    } catch {
+      setRadiusMessage("Gagal menyimpan pengaturan");
+    } finally {
+      setSavingRadius(false);
+    }
+  };
 
   const [dummyKaryawan, setDummyKaryawan] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,13 +111,26 @@ export default function KaryawanPage() {
           <p className="text-sm text-zinc-500 font-medium">Kelola Karyawan Anda</p>
         </div>
         
-        <Link 
-          href="/karyawan/tambah" 
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#AF520C] text-white rounded-lg text-sm font-bold hover:bg-[#8e4209] transition shadow-sm"
-        >
-          <Plus size={18} />
-          Tambah Karyawan
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowPengaturan(!showPengaturan)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition shadow-sm border ${
+              showPengaturan
+                ? "bg-[#AF520C] text-white border-[#AF520C]"
+                : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50"
+            }`}
+          >
+            <Settings size={18} />
+            Pengaturan
+          </button>
+          <Link 
+            href="/karyawan/tambah" 
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#AF520C] text-white rounded-lg text-sm font-bold hover:bg-[#8e4209] transition shadow-sm"
+          >
+            <Plus size={18} />
+            Tambah Karyawan
+          </Link>
+        </div>
       </div>
 
       {/* FILTER BAR (Putih melengkung kayak di desain lu) */}
@@ -250,6 +302,53 @@ export default function KaryawanPage() {
           )}
         </div>
       </div>
+
+      {/* PENGATURAN TOKO — collapsible */}
+      {showPengaturan && (
+        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 mt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Settings className="text-[#AF520C]" size={20} />
+            <h3 className="text-lg font-bold text-zinc-800">Pengaturan Toko</h3>
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-zinc-700 mb-2">
+              Radius Kurir Internal (km)
+            </label>
+            <p className="text-xs text-zinc-500 mb-3">
+              Kurir toko hanya melayani pengiriman dalam radius ini dari toko.
+              Di luar radius ini, customer harus memilih ekspedisi eksternal.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={radius}
+                onChange={(e) => setRadius(e.target.value)}
+                className="w-24 px-3 py-2 border border-zinc-300 rounded-lg text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-[#AF520C] focus:border-transparent"
+              />
+              <span className="text-zinc-600 font-medium">kilometer</span>
+            </div>
+          </div>
+          <button
+            onClick={handleSaveRadius}
+            disabled={savingRadius}
+            className="flex items-center gap-2 bg-[#AF520C] hover:bg-[#8e4209] disabled:bg-zinc-300 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+          >
+            <Save size={16} />
+            {savingRadius ? "Menyimpan..." : "Simpan"}
+          </button>
+          {radiusMessage && (
+            <div className={`mt-3 p-3 rounded-lg text-sm ${
+              radiusMessage.includes("berhasil") 
+                ? "bg-green-50 text-green-700 border border-green-200" 
+                : "bg-red-50 text-red-700 border border-red-200"
+            }`}>
+              {radiusMessage}
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );
