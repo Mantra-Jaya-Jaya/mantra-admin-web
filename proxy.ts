@@ -1,26 +1,39 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server'; 
+import type { NextRequest } from 'next/server';
 
+function getTokenRole(token: string): string | null {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded.role || null;
+  } catch {
+    return null;
+  }
+}
 
 export function proxy(request: NextRequest) {
-  // Cek token di cookie
   const token = request.cookies.get('access_token')?.value || request.cookies.get('token')?.value;
-  
-  // Cek user lagi mau buka halaman apa
   const path = request.nextUrl.pathname;
   const isLoginPage = path.startsWith('/login');
 
-  // ATURAN 1: Kalau belum login dan mau buka halaman selain login
   if (!token && !isLoginPage) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // ATURAN 2: Kalau UDAH login, tapi iseng buka halaman login lagi
   if (token && isLoginPage) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Kalau aman
+  if (token && !isLoginPage) {
+    const role = getTokenRole(token);
+    if (role?.toLowerCase() !== 'admin') {
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      response.cookies.delete('access_token');
+      response.cookies.delete('refresh_token');
+      return response;
+    }
+  }
+
   return NextResponse.next();
 }
 
