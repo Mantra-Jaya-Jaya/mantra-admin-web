@@ -37,16 +37,28 @@ export default function NotifikasiPage() {
     fetchNotifikasi();
   }, []);
 
-  // Fungsi tandai semua dibaca (UI Only sementara)
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    const unreadSys = notifications.filter(
+      n => !n.isRead && typeof n.id_notifikasi === 'string' && n.id_notifikasi.startsWith('SYS-')
+    );
+
+    await Promise.all(
+      unreadSys.map(n => {
+        const id = n.id_notifikasi.replace('SYS-', '');
+        return fetch(`/api/v1/admin/notifikasi/${id}/baca`, { method: 'PATCH' });
+      })
+    );
+
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-    // Next Step: Kasih fetch PUT/PATCH ke Golang di sini buat update status ke DB
   };
 
-  // Fungsi hapus/dismiss notif (UI Only sementara)
-  const dismissNotification = (idTarget: string) => {
-    setNotifications(notifications.filter(n => n.id_notifikasi !== idTarget));
-    // Next Step: Kasih fetch DELETE ke Golang di sini buat hapus dari DB
+  const dismissNotification = async (idTarget: string) => {
+    setNotifications(prev => prev.filter(n => n.id_notifikasi !== idTarget));
+
+    if (idTarget.startsWith('SYS-')) {
+      const id = idTarget.replace('SYS-', '');
+      await fetch(`/api/v1/admin/notifikasi/${id}`, { method: 'DELETE' });
+    }
   };
 
   return (

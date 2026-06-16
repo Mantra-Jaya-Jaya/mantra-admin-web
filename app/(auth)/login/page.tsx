@@ -49,6 +49,12 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (res.ok && data.status === "success") {
+        const role = data?.data?.user?.role;
+        if (role !== "admin") {
+          setErrorMsg("Akun ini bukan admin. Silakan login dengan akun admin.");
+          setLoading(false);
+          return;
+        }
         setIsSuccess(true); 
         setTimeout(() => {
           router.push("/"); 
