@@ -94,21 +94,29 @@ export default function RevenueChart() {
         </div>
       </div>
 
-      <div className="w-full h-62.5 mt-4">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <BarChart data={chartBars}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} tickFormatter={(value) => `Rp ${value / 1000000}M`} width={80} />
-            <Tooltip 
-              cursor={{fill: '#f9fafb'}} 
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-              formatter={(value) => [`Rp ${Number(value || 0).toLocaleString('id-ID')}`, 'Total Revenue']}
-            />
-            <Bar dataKey="total" fill="#a8571d" radius={[6, 6, 0, 0]} barSize={40} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {chartBars.length > 0 ? (
+        <div className="w-full h-62.5 mt-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartBars}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} tickFormatter={(value) => `Rp ${value / 1000000}M`} width={80} />
+              <Tooltip 
+                cursor={{fill: '#f9fafb'}} 
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                formatter={(value) => [`Rp ${Number(value || 0).toLocaleString('id-ID')}`, 'Total Revenue']}
+              />
+              <Bar dataKey="total" fill="#a8571d" radius={[6, 6, 0, 0]} barSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        !chartLoading && (
+          <div className="flex items-center justify-center h-62.5 mt-4 text-zinc-400 text-sm">
+            Belum ada data revenue untuk periode ini
+          </div>
+        )
+      )}
     </div>
   );
 }
