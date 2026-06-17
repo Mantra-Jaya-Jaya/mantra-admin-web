@@ -1,11 +1,24 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Search, RefreshCw, MapPin } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Search, RefreshCw, MapPin, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 
 export default function PengantaranPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("Semua Status");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchData = async () => {
     try {
@@ -22,14 +35,33 @@ export default function PengantaranPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const filtered = data.filter((d) =>
-    d.no_pesanan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.customer_nama?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.kurir_nama?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter client-side
+  const filtered = useMemo(() => {
+    return data.filter((d) => {
+      const matchSearch =
+        !debouncedSearch ||
+        d.no_pesanan?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        d.customer_nama?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        d.kurir_nama?.toLowerCase().includes(debouncedSearch.toLowerCase());
+
+      const matchStatus =
+        statusFilter === "Semua Status" ||
+        (statusFilter === "Internal" && !d.is_external) ||
+        (statusFilter === "Ekspedisi" && d.is_external) ||
+        (statusFilter === "Selesai" && d.status_pengantaran === "Selesai");
+
+      return matchSearch && matchStatus;
+    });
+  }, [data, debouncedSearch, statusFilter]);
+
+  // Pagination client-side
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentData = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="w-full pb-12">
+      {/* HEADER */}
       <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 mb-1">Monitoring Pengantaran</h1>
@@ -44,7 +76,9 @@ export default function PengantaranPage() {
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex gap-4 mb-6">
+      {/* FILTER BAR */}
+      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col sm:flex-row gap-4 mb-6">
+        {/* Search */}
         <div className="relative flex-1 max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
@@ -56,15 +90,33 @@ export default function PengantaranPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+
+        {/* Dropdown Status */}
+        <div className="relative">
+          <select
+            className="appearance-none bg-white border border-zinc-200 text-zinc-700 text-sm rounded-lg pl-4 pr-10 py-2 outline-none cursor-pointer hover:bg-zinc-50 focus:border-[#AF520C]"
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="Semua Status">Semua Status</option>
+            <option value="Internal">Internal (Kurir Toko)</option>
+            <option value="Ekspedisi">Ekspedisi Eksternal</option>
+            <option value="Selesai">Selesai</option>
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
+        </div>
       </div>
 
+      {/* TABEL */}
       {loading ? (
         <div className="flex justify-center py-20">
           <div className="animate-spin w-8 h-8 border-4 border-[#AF520C] border-t-transparent rounded-full"></div>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : currentData.length === 0 ? (
         <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-12 text-center text-zinc-400">
-          {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada pengantaran"}
+          {debouncedSearch || statusFilter !== "Semua Status"
+            ? "Tidak ada hasil pencarian"
+            : "Belum ada pengantaran"}
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
@@ -81,7 +133,7 @@ export default function PengantaranPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 text-sm text-zinc-800">
-                {filtered.map((d, i) => (
+                {currentData.map((d, i) => (
                   <tr key={d.public_id || i} className="hover:bg-orange-50/30 transition">
                     <td className="px-6 py-4 align-middle font-semibold">{d.no_pesanan}</td>
                     <td className="px-6 py-4 align-middle">{d.customer_nama}</td>
@@ -133,8 +185,60 @@ export default function PengantaranPage() {
               </tbody>
             </table>
           </div>
+
+          {/* PAGINATION */}
           <div className="px-6 py-4 border-t border-zinc-200 flex items-center justify-between bg-white">
-            <p className="text-sm text-zinc-500">Total: {filtered.length} pengantaran</p>
+            <p className="text-sm text-zinc-500">
+              Menampilkan {filtered.length === 0 ? 0 : startIndex + 1} hingga{" "}
+              {Math.min(startIndex + itemsPerPage, filtered.length)} dari{" "}
+              {filtered.length} pengantaran
+            </p>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 text-zinc-400 hover:text-zinc-800 transition rounded-md hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+
+                {(() => {
+                  const pages: (number | string)[] = [];
+                  const s = Math.max(1, currentPage - 2);
+                  const e = Math.min(totalPages, currentPage + 2);
+                  if (s > 1) { pages.push(1); if (s > 2) pages.push("..."); }
+                  for (let i = s; i <= e; i++) pages.push(i);
+                  if (e < totalPages) { if (e < totalPages - 1) pages.push("..."); pages.push(totalPages); }
+                  return pages.map((p, i) =>
+                    typeof p === "string" ? (
+                      <span key={`e${i}`} className="px-1 text-zinc-400 text-sm">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-md text-sm transition ${
+                          currentPage === p
+                            ? "bg-[#AF520C] text-white font-bold shadow-sm"
+                            : "text-zinc-600 hover:bg-zinc-100"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  );
+                })()}
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 text-zinc-400 hover:text-zinc-800 transition rounded-md hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
