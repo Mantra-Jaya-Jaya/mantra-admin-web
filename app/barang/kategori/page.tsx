@@ -182,9 +182,9 @@ export default function TambahKategoriPage() {
         handleBatalEdit();
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Delete error:", error);
-      setErrorMsg(error.message); 
+      setErrorMsg(error instanceof Error ? error.message : "Terjadi kesalahan saat menghapus kategori");
     } finally {
       setShowDeleteModal(false);
       setKategoriToDelete(null);

@@ -23,13 +23,15 @@ export default function ProfilePage() {
     fetch("/api/v1/admin/profil")
       .then((r) => r.json())
       .then((json) => {
-        if (json.data) {
+        if (json.status === "success" && json.data) {
           setProfile(json.data);
           setForm({
             nama_lengkap: json.data.nama_lengkap || "",
             email: json.data.email || "",
             username: json.data.username || "",
           });
+        } else {
+          setError(json.message || "Gagal memuat profil");
         }
       })
       .catch(() => setError("Gagal memuat profil"))
