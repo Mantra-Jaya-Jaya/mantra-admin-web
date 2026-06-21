@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 
 export default function LoginPage() {
@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // 🚀 LOGIKA PARALLAX (Bikin Awan Interaktif Ngikutin Mouse)
   const mouseX = useMotionValue(0);
@@ -195,14 +196,23 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-[#301905] ml-1">Password</label>
-              <input
-                type="password"
-                required
-                placeholder="Enter your password"
-                className="w-full border border-zinc-200 bg-zinc-50/50 rounded-2xl px-5 py-3.5 text-sm text-zinc-900 focus:outline-none focus:border-[#AF520C] focus:ring-4 focus:ring-[#AF520C]/10 transition-all placeholder:text-zinc-400"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="Enter your password"
+                  className="w-full border border-zinc-200 bg-zinc-50/50 rounded-2xl px-5 py-3.5 pr-12 text-sm text-zinc-900 focus:outline-none focus:border-[#AF520C] focus:ring-4 focus:ring-[#AF520C]/10 transition-all placeholder:text-zinc-400"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             <div className="flex justify-between items-center px-1">
