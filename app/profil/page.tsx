@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Camera, Check, X, User, Mail, AtSign, Shield } from "lucide-react";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<{
@@ -23,13 +24,15 @@ export default function ProfilePage() {
     fetch("/api/v1/admin/profil")
       .then((r) => r.json())
       .then((json) => {
-        if (json.data) {
+        if (json.status === "success" && json.data) {
           setProfile(json.data);
           setForm({
             nama_lengkap: json.data.nama_lengkap || "",
             email: json.data.email || "",
             username: json.data.username || "",
           });
+        } else {
+          setError(json.message || "Gagal memuat profil");
         }
       })
       .catch(() => setError("Gagal memuat profil"))
@@ -88,6 +91,8 @@ export default function ProfilePage() {
       setUploading(false);
     }
   };
+
+
 
   if (loading) {
     return (
@@ -242,12 +247,20 @@ export default function ProfilePage() {
                 </div>
               ))}
             </div>
-            <button
-              onClick={() => setEditMode(true)}
-              className="mt-5 bg-[#AF520C] text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#924300] transition"
-            >
-              Edit Profil
-            </button>
+            <div className="flex gap-4 mt-5">
+              <button
+                onClick={() => setEditMode(true)}
+                className="bg-[#AF520C] text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#924300] transition"
+              >
+                Edit Profil
+              </button>
+              <Link
+                href="/profil/ubah-password"
+                className="border border-[#AF520C] text-[#AF520C] px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#AF520C]/5 transition flex items-center justify-center"
+              >
+                Ubah Password
+              </Link>
+            </div>
           </>
         )}
       </div>

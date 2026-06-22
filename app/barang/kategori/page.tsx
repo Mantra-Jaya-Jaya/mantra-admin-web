@@ -1,12 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { CloudUpload, ChevronRight, Tags, Trash2, Info, Loader2, Pencil, X } from "lucide-react";
 
+interface KategoriItem {
+  public_id: string;
+  nama_kategori: string;
+  icon_kategori: string;
+  jumlah_barang: number;
+}
+
 export default function TambahKategoriPage() {
-  const router = useRouter();
-  
   // STATE LOADING & PESAN
   const [loadingForm, setLoadingForm] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -20,7 +25,7 @@ export default function TambahKategoriPage() {
   const [isDragging, setIsDragging] = useState(false); 
 
   // STATE LIST KATEGORI
-  const [kategoriList, setKategoriList] = useState<any[]>([]);
+  const [kategoriList, setKategoriList] = useState<KategoriItem[]>([]);
 
   // STATE CUSTOM MODAL DELETE
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -43,8 +48,41 @@ export default function TambahKategoriPage() {
   };
 
   useEffect(() => {
-    fetchKategori();
+    let mounted = true;
+
+    const loadKategori = async () => {
+      setIsFetching(true);
+      try {
+        const res = await fetch("/api/v1/admin/kategori");
+        const json = await res.json();
+        if (mounted && res.ok && json.data) {
+          setKategoriList(json.data);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil daftar kategori:", error);
+      } finally {
+        if (mounted) {
+          setIsFetching(false);
+        }
+      }
+    };
+
+    void loadKategori();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!errorMsg) return;
+
+    const timer = setTimeout(() => {
+      setErrorMsg("");
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [errorMsg]);
 
   // 🚀 2. HANDLER DRAG & DROP GAMBAR
   const processFile = (file: File | undefined) => {
@@ -71,7 +109,7 @@ export default function TambahKategoriPage() {
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); processFile(e.dataTransfer.files?.[0]); };
 
   // 🔥 3. HANDLER KLIK TOMBOL EDIT
-  const handleEditClick = (item: any) => {
+  const handleEditClick = (item: KategoriItem) => {
     setEditingId(item.public_id);
     setNamaKategori(item.nama_kategori);
     setPreviewUrl(item.icon_kategori || "");
@@ -116,7 +154,7 @@ export default function TambahKategoriPage() {
       }
 
       // B. Siapkan Payload JSON
-      const payload: any = {
+      const payload: { nama_kategori: string; icon_kategori?: string } = {
         nama_kategori: namaKategori,
       };
       
@@ -145,9 +183,9 @@ export default function TambahKategoriPage() {
       handleBatalEdit();
       fetchKategori(); 
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Save error:", error);
-      setErrorMsg(error.message || "Terjadi kesalahan sistem.");
+      setErrorMsg(error instanceof Error ? error.message : "Terjadi kesalahan sistem.");
     } finally {
       setLoadingForm(false);
     }
@@ -182,9 +220,9 @@ export default function TambahKategoriPage() {
         handleBatalEdit();
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Delete error:", error);
-      setErrorMsg(error.message); 
+      setErrorMsg(error instanceof Error ? error.message : "Terjadi kesalahan saat menghapus kategori");
     } finally {
       setShowDeleteModal(false);
       setKategoriToDelete(null);
@@ -236,9 +274,23 @@ export default function TambahKategoriPage() {
       </div>
 
       {errorMsg && (
-        <div className="mb-6 p-4 bg-orange-50 border border-[#AF520C]/30 text-[#AF520C] rounded-lg text-sm font-semibold flex justify-between items-center">
-          <span>{errorMsg}</span>
-          <button onClick={() => setErrorMsg("")} className="text-[#AF520C] hover:text-[#8e4209]"><X size={16}/></button>
+        <div className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-md rounded-xl border border-[#AF520C]/25 bg-white px-4 py-3 text-sm text-zinc-700 shadow-2xl shadow-orange-950/10 backdrop-blur-sm">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-full bg-orange-50 p-1.5 text-[#AF520C]">
+              <Info size={14} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-zinc-900">Perhatian</p>
+              <p className="mt-0.5 leading-relaxed text-zinc-600">{errorMsg}</p>
+            </div>
+            <button
+              onClick={() => setErrorMsg("")}
+              className="shrink-0 rounded-full p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+              aria-label="Tutup pesan"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -278,7 +330,7 @@ export default function TambahKategoriPage() {
                     
                     {previewUrl ? (
                       <div className="absolute inset-0 w-full h-full bg-zinc-100 flex items-center justify-center p-2">
-                        <img src={previewUrl} alt="Preview" className="max-h-full max-w-full object-contain" />
+                        <Image src={previewUrl} alt="Preview" fill unoptimized className="object-contain p-2" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-sm text-white text-xs font-bold">
                           Ganti Gambar
                         </div>
@@ -365,7 +417,7 @@ export default function TambahKategoriPage() {
                     >
                       <div className="flex items-center gap-3">
                         {item.icon_kategori ? (
-                          <img src={item.icon_kategori} alt={item.nama_kategori} className="w-9 h-9 rounded-lg shadow-sm object-cover bg-white" />
+                          <Image src={item.icon_kategori} alt={item.nama_kategori} width={36} height={36} unoptimized className="w-9 h-9 rounded-lg shadow-sm object-cover bg-white" />
                         ) : (
                           <div className="w-9 h-9 rounded-lg shadow-sm bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-xs">
                             {item.nama_kategori.substring(0, 2).toUpperCase()}
@@ -386,9 +438,13 @@ export default function TambahKategoriPage() {
                           <Pencil size={16} />
                         </button>
                         <button 
-                          onClick={() => triggerDelete(itemId)}
-                          className="text-zinc-400 hover:text-red-500 bg-white p-1.5 rounded-md shadow-sm border border-zinc-100 hover:border-red-200 transition-all"
-                          title="Hapus Kategori"
+                          onClick={() => !item.jumlah_barang && triggerDelete(itemId)}
+                          className={`bg-white p-1.5 rounded-md shadow-sm border transition-all ${
+                            item.jumlah_barang > 0
+                              ? "text-zinc-300 border-zinc-100 cursor-not-allowed"
+                              : "text-zinc-400 hover:text-red-500 border-zinc-100 hover:border-red-200"
+                          }`}
+                          title={item.jumlah_barang > 0 ? `Tidak bisa dihapus (${item.jumlah_barang} produk terkait)` : "Hapus Kategori"}
                         >
                           <Trash2 size={16} />
                         </button>
