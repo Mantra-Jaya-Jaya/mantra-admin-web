@@ -13,13 +13,19 @@ export default function Navbar() {
   const [adminData, setAdminData] = useState<{nama_lengkap: string; email: string; foto_profil: string} | null>(null);
 
   useEffect(() => {
+    if (pathname === '/login') return;
+
     fetch('/api/v1/admin/profil')
       .then(res => res.json())
       .then(json => {
-        if (json.data) setAdminData(json.data);
+        if (json.status === "success" && json.data) {
+          setAdminData(json.data);
+        } else {
+          setAdminData(null);
+        }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => setAdminData(null));
+  }, [pathname]);
 
   // Saklar Otomatis: Kalau lagi di halaman login, Navbar langsung ngilang!
   if (pathname === '/login') return null;
