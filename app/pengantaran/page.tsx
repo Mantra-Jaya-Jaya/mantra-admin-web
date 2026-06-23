@@ -46,9 +46,7 @@ export default function PengantaranPage() {
 
       const matchStatus =
         statusFilter === "Semua Status" ||
-        (statusFilter === "Internal" && !d.is_external) ||
-        (statusFilter === "Ekspedisi" && d.is_external) ||
-        (statusFilter === "Selesai" && d.status_pengantaran === "Selesai");
+        d.status_pengantaran === statusFilter;
 
       return matchSearch && matchStatus;
     });
@@ -99,9 +97,11 @@ export default function PengantaranPage() {
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="Semua Status">Semua Status</option>
-            <option value="Internal">Internal (Kurir Toko)</option>
-            <option value="Ekspedisi">Ekspedisi Eksternal</option>
+            <option value="Menunggu Pickup">Menunggu Pickup</option>
+            <option value="Dalam Perjalanan">Dalam Perjalanan</option>
+            <option value="Tiba di Tujuan">Tiba di Tujuan</option>
             <option value="Selesai">Selesai</option>
+            <option value="Gagal Antar">Gagal Antar</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
         </div>
@@ -138,24 +138,38 @@ export default function PengantaranPage() {
                     <td className="px-6 py-4 align-middle font-semibold">{d.no_pesanan}</td>
                     <td className="px-6 py-4 align-middle">{d.customer_nama}</td>
                     <td className="px-6 py-4 align-middle">
-                      <div>
-                        <span className="font-medium">{d.kurir_nama}</span>
-                        {d.kurir_nama !== "-" && <span className="text-zinc-400"> — </span>}
-                        <span className="text-zinc-500 text-xs">{d.ekspedisi}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                          d.is_external
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
+                            : "bg-blue-50 text-blue-700 border-blue-200"
+                        }`}>
+                          {d.is_external ? "Ekspedisi" : "Internal"}
+                        </span>
+                        <span className="font-medium">{d.kurir_nama !== "-" ? d.kurir_nama : d.ekspedisi}</span>
+                        {d.kurir_nama !== "-" && d.ekspedisi !== "Kurir Toko" && (
+                          <span className="text-zinc-400 text-xs">— {d.ekspedisi}</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 align-middle">
-                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                        d.is_external
-                          ? "bg-purple-50 text-purple-700 border border-purple-200"
-                          : d.status_pengantaran === "Selesai"
-                          ? "bg-green-50 text-green-700 border border-green-200"
-                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                        d.status_pengantaran === "Menunggu Pickup" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                        d.status_pengantaran === "Dalam Perjalanan" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        d.status_pengantaran === "Tiba di Tujuan" ? "bg-green-50 text-green-700 border-green-200" :
+                        d.status_pengantaran === "Selesai" ? "bg-green-50 text-green-700 border-green-200" :
+                        d.status_pengantaran === "Gagal Antar" ? "bg-red-50 text-red-700 border-red-200" :
+                        "bg-zinc-50 text-zinc-600 border-zinc-200"
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                          d.is_external ? "bg-purple-500" : d.status_pengantaran === "Selesai" ? "bg-green-500" : "bg-blue-500"
+                          d.status_pengantaran === "Menunggu Pickup" ? "bg-amber-500" :
+                          d.status_pengantaran === "Dalam Perjalanan" ? "bg-blue-500" :
+                          d.status_pengantaran === "Tiba di Tujuan" ? "bg-green-500" :
+                          d.status_pengantaran === "Selesai" ? "bg-green-500" :
+                          d.status_pengantaran === "Gagal Antar" ? "bg-red-500" :
+                          "bg-zinc-400"
                         }`}></span>
-                        {d.is_external ? "Ekspedisi" : d.status_pengantaran}
+                        {d.status_pengantaran}
                       </div>
                     </td>
                     <td className="px-6 py-4 align-middle">
