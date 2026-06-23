@@ -215,14 +215,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex justify-between items-center px-1">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input type="checkbox" className="w-4 h-4 rounded border-zinc-300 text-[#AF520C] focus:ring-[#AF520C] cursor-pointer" />
-                <span className="text-xs text-zinc-500 font-medium group-hover:text-zinc-800 transition">Remember me</span>
-              </label>
-              <button type="button" className="text-xs text-[#AF520C] font-bold hover:underline">Lupa Password?</button>
-            </div>
-
             {errorMsg && (
               <motion.p 
                 initial={{ opacity: 0, y: -10 }}
