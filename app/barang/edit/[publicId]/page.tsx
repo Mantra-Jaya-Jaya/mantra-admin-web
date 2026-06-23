@@ -7,7 +7,10 @@ import {
   ChevronDown, Package, Barcode, Loader2, RefreshCw, 
   ArrowDownToLine, ArrowUpFromLine, Pencil, BadgePercent
 } from "lucide-react"; 
-import BarcodeScannerModal from "@/components/BarcodeScanner";
+import dynamic from "next/dynamic";
+const BarcodeScannerModal = dynamic(() => import("@/components/BarcodeScanner"), {
+  ssr: false,
+});
 
 export default function EditBarangPage() {
   const router = useRouter();

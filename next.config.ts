@@ -6,6 +6,9 @@ const devOrigins = process.env.ALLOWED_DEV_ORIGINS
   ? process.env.ALLOWED_DEV_ORIGINS.split(',') 
   : ['localhost', '127.0.0.1'];
 
+// URL API Backend Golang untuk server-side proxy
+const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+
 const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
@@ -33,7 +36,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*', // Proxy to Golang Backend
+        destination: `${backendUrl}/api/:path*`, // Proxy to Golang Backend
       },
     ];
   },

@@ -3,7 +3,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CloudUpload, ScanLine, Trash2, Plus, ChevronRight, ChevronDown, Package, Barcode, Loader2, Tag, BadgePercent } from "lucide-react"; 
-import BarcodeScannerModal from "@/components/BarcodeScanner";
+import dynamic from "next/dynamic";
+const BarcodeScannerModal = dynamic(() => import("@/components/BarcodeScanner"), {
+  ssr: false,
+});
 
 export default function TambahBarangPage() {
   const router = useRouter();
