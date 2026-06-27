@@ -7,7 +7,7 @@ export default function KaryawanPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("Semua Role");
-  const [statusFilter, setStatusFilter] = useState("Aktif");
+  const [statusFilter, setStatusFilter] = useState("Semua Status");
 
   // Pengaturan
   const [showPengaturan, setShowPengaturan] = useState(false);
@@ -170,8 +170,8 @@ export default function KaryawanPage() {
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
-            <option value="Aktif">Status Aktif</option>
             <option value="Semua Status">Semua Status</option>
+            <option value="Aktif">Status Aktif</option>
             <option value="Nonaktif">Nonaktif</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
