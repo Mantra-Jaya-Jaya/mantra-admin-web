@@ -89,7 +89,7 @@ export default function Navbar() {
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="w-9 h-9 bg-zinc-200 rounded-full overflow-hidden border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-[#AF520C]/50 transition-all"
             >
-              <img src={adminData?.foto_profil || `https://ui-avatars.com/api/?name=${adminData?.nama_lengkap || 'User'}&background=171717&color=fff`} alt={adminData?.nama_lengkap || 'User'} />
+              <img src={adminData?.foto_profil || `https://ui-avatars.com/api/?name=${adminData?.nama_lengkap || 'User'}&background=171717&color=fff`} alt={adminData?.nama_lengkap || 'User'} className="w-full h-full object-cover" />
             </div>
 
             {/* Dropdown Menu (Muncul kalau state showProfileMenu === true) */}
