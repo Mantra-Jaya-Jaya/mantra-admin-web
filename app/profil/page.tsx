@@ -73,7 +73,7 @@ export default function ProfilePage() {
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("foto", file);
       const res = await fetch("/api/v1/admin/profil/upload", {
         method: "POST",
         body: formData,
