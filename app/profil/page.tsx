@@ -80,7 +80,7 @@ export default function ProfilePage() {
       });
       const json = await res.json();
       if (res.ok && json.status === "success") {
-        setProfile((prev) => prev ? { ...prev, foto_profil: json.data.url } : null);
+        setProfile((prev) => prev ? { ...prev, foto_profil: json.data.foto_profil } : null);
         setSuccess("Foto profil berhasil diperbarui");
       } else {
         setError(json.message || "Gagal upload foto");
