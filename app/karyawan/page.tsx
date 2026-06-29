@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, ChevronDown, Settings, Save } from "lucide-react";
+import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, ChevronDown, Settings, Save, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function KaryawanPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,6 +55,9 @@ export default function KaryawanPage() {
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 5;
 
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, publicId: "", nama: "" });
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -94,6 +97,24 @@ export default function KaryawanPage() {
     }
   };
 
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/v1/admin/karyawan/${deleteModal.publicId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (res.ok) {
+        fetchKaryawan();
+      } else {
+        alert("Gagal menghapus: " + json.message);
+      }
+    } catch {
+      alert("Terjadi kesalahan saat menghapus data.");
+    } finally {
+      setDeleteModal({ isOpen: false, publicId: "", nama: "" });
+      setIsDeleting(false);
+    }
+  };
+
   useEffect(() => {
     fetchKaryawan();
   }, [currentPage, debouncedSearch, roleFilter, statusFilter]);
@@ -102,6 +123,37 @@ export default function KaryawanPage() {
   const currentData = dummyKaryawan; // Data dari API sudah dipotong
 
   return (
+    <>
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform animate-in zoom-in-95 duration-200 border border-zinc-200 p-6 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mb-4 text-red-500 border border-red-100">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-extrabold text-zinc-900 mb-2">Hapus Karyawan?</h3>
+            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+              Anda yakin ingin menghapus <span className="font-bold text-zinc-800">"{deleteModal.nama}"</span>? Seluruh data terkait karyawan ini akan dihapus permanen.
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setDeleteModal({ isOpen: false, publicId: "", nama: "" })}
+                className="flex-1 px-4 py-2.5 bg-zinc-100 text-zinc-700 font-bold text-sm rounded-xl hover:bg-zinc-200 transition"
+                disabled={isDeleting}
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2.5 bg-[#AF520C] text-white font-bold text-sm rounded-xl hover:bg-[#8e4209] transition flex items-center justify-center gap-2"
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     <div className="w-full pb-12">
       
       {/* HEADER */}
@@ -234,15 +286,10 @@ export default function KaryawanPage() {
                   {/* Kolom Action */}
                   <td className="px-6 py-4 align-middle">
                     <div className="flex items-center gap-3">
-                      <button 
-                        className="text-zinc-400 hover:text-red-500 transition" 
+                      <button
+                        className="text-zinc-400 hover:text-red-500 transition"
                         title="Hapus"
-                        onClick={async () => {
-                          if (confirm(`Hapus karyawan ${user.nama}?`)) {
-                            const res = await fetch(`/api/v1/admin/karyawan/${user.id}`, { method: "DELETE" });
-                            if (res.ok) fetchKaryawan();
-                          }
-                        }}
+                        onClick={() => setDeleteModal({ isOpen: true, publicId: user.id, nama: user.nama })}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -351,5 +398,6 @@ export default function KaryawanPage() {
       )}
 
     </div>
+    </>
   );
 }
