@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Package } from 'lucide-react';
 
 export default function CriticalStock({ data }: { data: any[] }) {
@@ -11,7 +12,9 @@ export default function CriticalStock({ data }: { data: any[] }) {
           <h3 className="font-bold text-zinc-800 text-lg">Stok Barang Kritis</h3>
           <p className="text-sm text-zinc-400">Items needing restocking soon</p>
         </div>
-        <button className="text-orange-600 text-sm font-semibold hover:underline">View All</button>
+        <Link href="/barang" className="text-orange-600 text-sm font-semibold hover:underline">
+          View All
+        </Link>
       </div>
       
       <div className="flex flex-col gap-6 overflow-y-auto pr-2">
