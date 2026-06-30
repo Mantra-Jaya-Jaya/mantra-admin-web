@@ -97,7 +97,6 @@ export default function PengantaranPage() {
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="Semua Status">Semua Status</option>
-            <option value="Menunggu Pickup">Menunggu Pickup</option>
             <option value="Dalam Perjalanan">Dalam Perjalanan</option>
             <option value="Tiba di Tujuan">Tiba di Tujuan</option>
             <option value="Selesai">Selesai</option>

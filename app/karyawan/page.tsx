@@ -56,6 +56,7 @@ export default function KaryawanPage() {
   const itemsPerPage = 5;
 
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, publicId: "", nama: "" });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Debounce search
@@ -104,13 +105,19 @@ export default function KaryawanPage() {
       const json = await res.json();
       if (res.ok) {
         fetchKaryawan();
+        setDeleteModal({ isOpen: false, publicId: "", nama: "" });
       } else {
-        alert("Gagal menghapus: " + json.message);
+        setDeleteModal({ isOpen: false, publicId: "", nama: "" });
+        let errorMsg = json.message || "Gagal menghapus karyawan.";
+        if (json.message && json.message.includes("Karyawan memiliki riwayat transaksi")) {
+          errorMsg = "Karyawan ini tidak dapat dihapus permanen karena memiliki riwayat transaksi. Mohon nonaktifkan saja statusnya untuk menjaga integritas data.";
+        }
+        setErrorModal({ isOpen: true, message: errorMsg });
       }
     } catch {
-      alert("Terjadi kesalahan saat menghapus data.");
-    } finally {
       setDeleteModal({ isOpen: false, publicId: "", nama: "" });
+      setErrorModal({ isOpen: true, message: "Terjadi kesalahan saat menghapus data." });
+    } finally {
       setIsDeleting(false);
     }
   };
@@ -150,6 +157,26 @@ export default function KaryawanPage() {
                 {isDeleting ? <Loader2 size={16} className="animate-spin" /> : "Ya, Hapus"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {errorModal.isOpen && (
+        <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform animate-in zoom-in-95 duration-200 border border-zinc-200 p-6 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mb-4 text-amber-500 border border-amber-100">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-extrabold text-zinc-900 mb-2">Perhatian</h3>
+            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+              {errorModal.message}
+            </p>
+            <button
+              onClick={() => setErrorModal({ isOpen: false, message: "" })}
+              className="w-full px-4 py-2.5 bg-zinc-100 text-zinc-700 font-bold text-sm rounded-xl hover:bg-zinc-200 transition"
+            >
+              Mengerti
+            </button>
           </div>
         </div>
       )}
@@ -289,7 +316,16 @@ export default function KaryawanPage() {
                       <button
                         className="text-zinc-400 hover:text-red-500 transition"
                         title="Hapus"
-                        onClick={() => setDeleteModal({ isOpen: true, publicId: user.id, nama: user.nama })}
+                        onClick={() => {
+                          if (user.status === "Aktif") {
+                            setErrorModal({ 
+                              isOpen: true, 
+                              message: `Karyawan "${user.nama}" masih berstatus Aktif. Mohon edit dan ubah statusnya menjadi Nonaktif terlebih dahulu.` 
+                            });
+                          } else {
+                            setDeleteModal({ isOpen: true, publicId: user.id, nama: user.nama });
+                          }
+                        }}
                       >
                         <Trash2 size={18} />
                       </button>

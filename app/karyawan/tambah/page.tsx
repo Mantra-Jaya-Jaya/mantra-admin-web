@@ -156,9 +156,14 @@ export default function TambahKaryawanPage() {
                   value={formData.noTelp} onChange={(e) => setFormData({...formData, noTelp: e.target.value})} />
               </div>
               <div>
+                <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Username</label>
+                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="budi123" 
+                  value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} />
+              </div>
+              <div>
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Email</label>
                 <input type="email" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="budi@mantra.com" 
-                  value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value, username: e.target.value.split('@')[0]})} />
+                  value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Password</label>

@@ -44,7 +44,7 @@ export default function EkspedisiPage() {
 
   // States untuk pencarian, filter, dan pagination
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Semua Status");
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -106,60 +106,7 @@ export default function EkspedisiPage() {
     }
   };
 
-  const toggleEkspedisi = async (eks: Ekspedisi) => {
-    try {
-      const updatedStatus = !eks.is_active;
-      const res = await fetch(`/api/v1/admin/ekspedisi/${eks.public_id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: updatedStatus }),
-      });
 
-      if (res.ok) {
-        setEkspedisiList((prev) =>
-          prev.map((item) =>
-            item.public_id === eks.public_id
-              ? { ...item, is_active: updatedStatus }
-              : item,
-          ),
-        );
-      } else {
-        alert("Gagal mengubah status ekspedisi");
-      }
-    } catch (err) {
-      console.error("Gagal mengubah status ekspedisi", err);
-      alert("Terjadi kesalahan saat mengubah status ekspedisi");
-    }
-  };
-
-  const toggleLayanan = async (layanan: Layanan) => {
-    try {
-      const updatedStatus = !layanan.is_active;
-      const res = await fetch(`/api/v1/admin/ekspedisi/layanan/${layanan.public_id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: updatedStatus }),
-      });
-
-      if (res.ok) {
-        setEkspedisiList((prev) =>
-          prev.map((eks) => ({
-            ...eks,
-            layanan: eks.layanan.map((item) =>
-              item.public_id === layanan.public_id
-                ? { ...item, is_active: updatedStatus }
-                : item,
-            ),
-          })),
-        );
-      } else {
-        alert("Gagal mengubah status layanan");
-      }
-    } catch (err) {
-      console.error("Gagal mengubah status layanan", err);
-      alert("Terjadi kesalahan saat mengubah status layanan");
-    }
-  };
 
   // 1. Terapkan filter pencarian & status
   const filteredEkspedisi = ekspedisiList.filter((eks) => {
@@ -169,21 +116,10 @@ export default function EkspedisiPage() {
       eks.kode_api.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (eks.deskripsi && eks.deskripsi.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    // Filter status
-    let matchStatus = true;
-    if (statusFilter === "Aktif") {
-      matchStatus = eks.is_active === true;
-    } else if (statusFilter === "Nonaktif") {
-      matchStatus = eks.is_active === false;
-    }
-
-    return matchSearch && matchStatus;
+    return matchSearch;
   });
 
-  // Urutkan: Aktif dulu baru nonaktif
-  const sortedEkspedisi = [...filteredEkspedisi].sort(
-    (a, b) => Number(b.is_active) - Number(a.is_active),
-  );
+  const sortedEkspedisi = [...filteredEkspedisi];
 
   // Pagination
   const totalItems = sortedEkspedisi.length;
@@ -235,19 +171,7 @@ export default function EkspedisiPage() {
           />
         </div>
 
-        {/* Dropdown Status */}
-        <div className="relative">
-          <select 
-            className="appearance-none bg-white border border-zinc-200 text-zinc-700 text-sm rounded-lg pl-4 pr-10 py-2 outline-none cursor-pointer hover:bg-zinc-50 focus:border-[#AF520C]"
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="Semua Status">Semua Status</option>
-            <option value="Aktif">Status Aktif</option>
-            <option value="Nonaktif">Status Nonaktif</option>
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
-        </div>
+
       </div>
 
       {loading && !syncing ? (
@@ -275,7 +199,6 @@ export default function EkspedisiPage() {
                   <th className="px-6 py-4">Kode API</th>
                   <th className="px-6 py-4">Deskripsi</th>
                   <th className="px-6 py-4">Layanan</th>
-                  <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
               </thead>
@@ -331,23 +254,7 @@ export default function EkspedisiPage() {
                           </div>
                         </td>
 
-                        {/* Kolom Status (Toggle Switch) */}
-                        <td className="px-6 py-4 align-middle text-center">
-                          <button
-                            onClick={() => toggleEkspedisi(eks)}
-                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                              eks.is_active ? "bg-[#AF520C]" : "bg-zinc-200"
-                            }`}
-                            aria-label={`Toggle ekspedisi ${eks.nama_ekspedisi}`}
-                            aria-pressed={eks.is_active}
-                          >
-                            <span
-                              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                eks.is_active ? "translate-x-5" : "translate-x-0"
-                              }`}
-                            />
-                          </button>
-                        </td>
+
 
                         {/* Kolom Aksi */}
                         <td className="px-6 py-4 align-middle text-right">
@@ -364,7 +271,7 @@ export default function EkspedisiPage() {
                       {/* Collapsible Row for Services */}
                       {isExpanded && (
                         <tr className="bg-zinc-50/50">
-                          <td colSpan={6} className="p-6 border-b border-zinc-200">
+                          <td colSpan={5} className="p-6 border-b border-zinc-200">
                             <div className="mb-4 flex items-center justify-between gap-3">
                               <div>
                                 <h3 className="font-bold text-xs text-[#AF520C] uppercase tracking-wider">
@@ -407,20 +314,7 @@ export default function EkspedisiPage() {
                                         </p>
                                       </div>
 
-                                      <button
-                                        onClick={() => toggleLayanan(layanan)}
-                                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                          layanan.is_active ? "bg-green-600" : "bg-zinc-200"
-                                        }`}
-                                        aria-label={`Toggle layanan ${layanan.nama_layanan}`}
-                                        aria-pressed={layanan.is_active}
-                                      >
-                                        <span
-                                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                            layanan.is_active ? "translate-x-4" : "translate-x-0"
-                                          }`}
-                                        />
-                                      </button>
+
                                     </div>
                                   </div>
                                 ))}
