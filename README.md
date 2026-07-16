@@ -1,38 +1,65 @@
-# Mantra Admin Web
+# Mantra Admin Web Dashboard ☕🧑‍💻
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Mantra Admin Web Dashboard adalah antarmuka web modern yang digunakan untuk mengelola keseluruhan operasional kedai kopi "Mantra". Dibangun menggunakan teknologi web terkini untuk memberikan pengalaman pengguna (UX) yang cepat, interaktif, dan premium.
 
-## Getting Started
+Panel admin ini merupakan bagian dari ekosistem Mantra, terhubung langsung dengan **Mantra Backend (Golang)** untuk sinkronisasi data *real-time* ke **Mantra Mobile App (Flutter)**.
 
-First, run the development server:
+## 🌟 Fitur Utama
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Manajemen Dashboard & Analitik**: Menampilkan ringkasan pendapatan, grafik penjualan (dengan Recharts), dan laporan performa toko.
+- **Manajemen Karyawan**: Menambah, mengedit, dan menghapus (atau menonaktifkan) akun karyawan (Kasir & Kurir) beserta rol dan aksesnya.
+- **Manajemen Produk & Katalog**: Mengelola daftar menu kopi, spesifikasi barang, harga, dan ketersediaan stok.
+- **Manajemen Pesanan & Pengantaran**: Memantau status pesanan pelanggan dan melacak pengantaran kurir.
+- **Dukungan QR Code**: Terdapat integrasi pemindai QR (menggunakan HTML5 QR Code) untuk fitur operasional (seperti konfirmasi pesanan atau scan voucher).
+- **UI/UX Modern & Animasi**: Dilengkapi dengan animasi halus menggunakan Framer Motion dan integrasi desain 3D via Spline Tool.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 💻 Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Proyek ini dikembangkan menggunakan tumpukan teknologi berikut:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework**: [Next.js](https://nextjs.org/) (versi 16.x)
+- **Library UI**: [React](https://react.dev/) (versi 19.x)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) v4
+- **Animasi**: [Framer Motion](https://www.framer.com/motion/)
+- **Visualisasi Data**: [Recharts](https://recharts.org/)
+- **Ikon**: [Lucide React](https://lucide.dev/)
+- **3D Asset**: [@splinetool/react-spline](https://spline.design/)
 
-## Learn More
+## 🚀 Memulai (Getting Started)
 
-To learn more about Next.js, take a look at the following resources:
+### Prasyarat (Prerequisites)
+Pastikan Anda telah menginstal:
+- [Node.js](https://nodejs.org/) (Disarankan versi 20.x atau terbaru)
+- npm atau yarn
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Instalasi & Menjalankan Aplikasi
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Clone repositori ini atau masuk ke direktori proyek:
+   ```bash
+   cd mantra-admin-web
+   ```
 
-## Deploy on Vercel
+2. Instal seluruh dependensi proyek:
+   ```bash
+   npm install
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. (Opsional) Sesuaikan pengaturan *environment variables* (seperti `NEXT_PUBLIC_API_URL`) di dalam file `.env.local` untuk mengarahkan permintaan API ke Mantra Backend (Golang).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Jalankan *development server*:
+   ```bash
+   npm run dev
+   ```
+
+5. Buka [http://localhost:3000](http://localhost:3000) (atau IP lokal Anda) di browser kesayangan Anda. Aplikasi otomatis melakukan hot-reloading setiap ada perubahan kode.
+
+## 🛠️ Perintah Skrip (Scripts)
+
+Di dalam `package.json` tersedia perintah berikut:
+- `npm run dev` : Menjalankan aplikasi dalam mode *development* (Bisa diakses dari perangkat lain di jaringan yang sama berkat `-H 0.0.0.0`).
+- `npm run build` : Melakukan kompilasi untuk mode *production*.
+- `npm run start` : Menjalankan server hasil *build*.
+- `npm run lint` : Menjalankan ESLint untuk mengecek standar penulisan kode.
+
+## 🌐 Koneksi ke Backend
+Pastikan *Mantra Backend* berjalan (secara default biasanya di port `8080`) sebelum menggunakan fitur dinamis pada Admin Web ini, karena seluruh data karyawan, produk, dan transaksi bersumber dari REST API backend tersebut.
