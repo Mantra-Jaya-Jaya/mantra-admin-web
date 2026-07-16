@@ -14,28 +14,82 @@ export default function TambahKaryawanPage() {
   const [role, setRole] = useState("Kasir"); // Default Kasir
   const [shift, setShift] = useState("Pagi");
 
+  // State Foto
+  const [fotoProfil, setFotoProfil] = useState<string>("");
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+
   // State Form
   const [formData, setFormData] = useState({
-    nama: "", noTelp: "", email: "", password: "",
-    nik: "", tempatLahir: "", tglLahir: "",
-    gender: "Wanita", pendidikan: "D3 / S1", alamat: ""
+    nama: "", noTelp: "", email: "", password: "", username: "",
+    nik: "", tempatLahir: "", tanggalLahir: "",
+    jenisKelamin: "", pendidikanTerakhir: "", alamat: ""
   });
+
+  const handleUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const data = new FormData();
+    data.append("foto", file);
+
+    setUploadingFoto(true);
+    try {
+      const res = await fetch("/api/v1/admin/karyawan/upload", {
+        method: "POST",
+        body: data,
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setFotoProfil(result.url);
+      } else {
+        alert(result.message || "Gagal upload foto");
+      }
+    } catch (err) {
+      alert("Error jaringan saat upload");
+    } finally {
+      setUploadingFoto(false);
+    }
+  };
 
   const handleSimpan = async () => {
     setLoading(true);
     // Simulasi Payload buat temen backend lu
     const payload = {
-      ...formData,
+      nama_lengkap: formData.nama,
+      no_telp: formData.noTelp,
+      email: formData.email,
+      password: formData.password,
+      username: formData.username,
+      nik: formData.nik,
+      tempat_lahir: formData.tempatLahir,
+      tanggal_lahir: formData.tanggalLahir,
+      jenis_kelamin: formData.jenisKelamin,
+      pendidikan_terakhir: formData.pendidikanTerakhir,
+      alamat: formData.alamat,
+      foto_profil: fotoProfil,
       role: role,
-      shift: role === "Kasir" ? shift : null // Shift null kalau Kurir
+      shift: role === "Kasir" ? shift : null
     };
     
     console.log("Kirim ke Golang:", payload);
 
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/v1/admin/karyawan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        router.push("/karyawan");
+      } else {
+        const err = await res.json();
+        alert(err.message || "Gagal menyimpan");
+      }
+    } catch (e) {
+      alert("Error jaringan");
+    } finally {
       setLoading(false);
-      router.push("/karyawan");
-    }, 1000);
+    }
   };
 
   return (
@@ -76,29 +130,45 @@ export default function TambahKaryawanPage() {
             
             {/* Upload Foto */}
             <div className="flex flex-col items-center mb-8">
-              <div className="w-32 h-32 rounded-full border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center bg-zinc-50 hover:bg-orange-50 transition cursor-pointer group relative overflow-hidden">
-                <CloudUpload size={24} className="text-zinc-400 group-hover:text-[#AF520C]" />
-                <span className="text-[10px] font-bold text-zinc-400 mt-1">Upload Foto</span>
-              </div>
+              <label className="w-32 h-32 rounded-full border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center bg-zinc-50 hover:bg-orange-50 transition cursor-pointer group relative overflow-hidden">
+                <input type="file" className="hidden" accept="image/*" onChange={handleUploadFoto} disabled={uploadingFoto} />
+                {fotoProfil ? (
+                  <img src={fotoProfil} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <CloudUpload size={24} className="text-zinc-400 group-hover:text-[#AF520C]" />
+                    <span className="text-[10px] font-bold text-zinc-400 mt-1">{uploadingFoto ? "Uploading..." : "Upload Foto"}</span>
+                  </>
+                )}
+              </label>
               <p className="text-[11px] text-zinc-400 mt-3 text-center">Rekomendasi rasio 1:1 (Max 2MB)</p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Nama Lengkap</label>
-                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="Cth: Budi Kusuma" />
+                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="Cth: Budi Kusuma" 
+                  value={formData.nama} onChange={(e) => setFormData({...formData, nama: e.target.value})} />
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Nomor Telepon</label>
-                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="+62 8..." />
+                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="+62 8..." 
+                  value={formData.noTelp} onChange={(e) => setFormData({...formData, noTelp: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Username</label>
+                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="budi123" 
+                  value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} />
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Email</label>
-                <input type="email" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="budi@mantra.com" />
+                <input type="email" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="budi@mantra.com" 
+                  value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Password</label>
-                <input type="password" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="••••••••" />
+                <input type="password" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none transition" placeholder="••••••••" 
+                  value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
               </div>
             </div>
           </div>
@@ -114,37 +184,43 @@ export default function TambahKaryawanPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="md:col-span-2">
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">NIK (Nomor Induk Kependudukan)</label>
-                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none" placeholder="16 Digit NIK" />
+                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none" placeholder="16 Digit NIK" 
+                  value={formData.nik} onChange={(e) => setFormData({...formData, nik: e.target.value})} />
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Tempat Lahir</label>
-                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none" placeholder="Cth: Jakarta" />
+                <input type="text" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none" placeholder="Cth: Jakarta" 
+                  value={formData.tempatLahir} onChange={(e) => setFormData({...formData, tempatLahir: e.target.value})} />
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Tanggal Lahir</label>
-                <input type="date" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none" />
+                <input type="date" className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none" 
+                  value={formData.tanggalLahir} onChange={(e) => setFormData({...formData, tanggalLahir: e.target.value})} />
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-2 block uppercase tracking-wider">Jenis Kelamin</label>
                 <div className="flex bg-zinc-100 p-1 rounded-xl">
-                  <button onClick={() => setFormData({...formData, gender: "Wanita"})} className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${formData.gender === "Wanita" ? "bg-white text-[#AF520C] shadow-sm" : "text-zinc-500"}`}>Wanita</button>
-                  <button onClick={() => setFormData({...formData, gender: "Pria"})} className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${formData.gender === "Pria" ? "bg-white text-[#AF520C] shadow-sm" : "text-zinc-500"}`}>Pria</button>
+                  <button onClick={() => setFormData({...formData, jenisKelamin: "Wanita"})} className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${formData.jenisKelamin === "Wanita" ? "bg-white text-[#AF520C] shadow-sm" : "text-zinc-500"}`}>Wanita</button>
+                  <button onClick={() => setFormData({...formData, jenisKelamin: "Pria"})} className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${formData.jenisKelamin === "Pria" ? "bg-white text-[#AF520C] shadow-sm" : "text-zinc-500"}`}>Pria</button>
                 </div>
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-500 mb-2 block uppercase tracking-wider">Pendidikan Terakhir</label>
                 <div className="relative">
-                  <select className="w-full border border-zinc-200 rounded-xl p-3 pr-10 text-sm focus:border-[#AF520C] outline-none bg-white appearance-none cursor-pointer">
-                    <option>SMA / SMK</option>
-                    <option>D3 / S1</option>
-                    <option>S2</option>
+                  <select className="w-full border border-zinc-200 rounded-xl p-3 pr-10 text-sm focus:border-[#AF520C] outline-none bg-white appearance-none cursor-pointer"
+                    value={formData.pendidikanTerakhir} onChange={(e) => setFormData({...formData, pendidikanTerakhir: e.target.value})}>
+                    <option value="" disabled hidden>Pilih Pendidikan</option>
+                    <option value="SMA / SMK">SMA / SMK</option>
+                    <option value="D3 / S1">D3 / S1</option>
+                    <option value="S2">S2</option>
                   </select>
                   <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                 </div>
               </div>
               <div className="md:col-span-2">
                 <label className="text-xs font-bold text-zinc-500 mb-1.5 block uppercase tracking-wider">Alamat Lengkap</label>
-                <textarea rows={3} className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none resize-none" placeholder="Jl. Merdeka No. 123..."></textarea>
+                <textarea rows={3} className="w-full border border-zinc-200 rounded-xl p-3 text-sm focus:border-[#AF520C] outline-none resize-none" placeholder="Jl. Merdeka No. 123..."
+                  value={formData.alamat} onChange={(e) => setFormData({...formData, alamat: e.target.value})}></textarea>
               </div>
             </div>
 

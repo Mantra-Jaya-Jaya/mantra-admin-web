@@ -1,31 +1,266 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { CloudUpload, ChevronRight, Tags, Trash2, Info } from "lucide-react";
+import { CloudUpload, ChevronRight, Tags, Trash2, Info, Loader2, Pencil, X } from "lucide-react";
+
+interface KategoriItem {
+  public_id: string;
+  nama_kategori: string;
+  icon_kategori: string;
+  jumlah_barang: number;
+}
 
 export default function TambahKategoriPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  
-  // Data kategori (Deskripsi udah dihapus dari database dummy)
-  const [existingKategori] = useState([
-    { id: 1, nama: "Alat Tulis", icon: "https://ui-avatars.com/api/?name=AT&background=AF520C&color=fff&rounded=true" },
-    { id: 2, nama: "Kertas & Buku", icon: "https://ui-avatars.com/api/?name=KB&background=18181b&color=fff&rounded=true" },
-    { id: 3, nama: "Aksesoris Komputer", icon: "https://ui-avatars.com/api/?name=AK&background=18181b&color=fff&rounded=true" }
-  ]);
+  // STATE LOADING & PESAN
+  const [loadingForm, setLoadingForm] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSimpan = (e: React.FormEvent<HTMLFormElement>) => {
+  // STATE FORM (TAMBAH / EDIT)
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [namaKategori, setNamaKategori] = useState("");
+  const [fileIcon, setFileIcon] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [isDragging, setIsDragging] = useState(false); 
+
+  // STATE LIST KATEGORI
+  const [kategoriList, setKategoriList] = useState<KategoriItem[]>([]);
+
+  // STATE CUSTOM MODAL DELETE
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [kategoriToDelete, setKategoriToDelete] = useState<string | null>(null);
+
+  // 🚀 1. FETCH DATA KATEGORI
+  const fetchKategori = async () => {
+    setIsFetching(true);
+    try {
+      const res = await fetch("/api/v1/admin/kategori");
+      const json = await res.json();
+      if (res.ok && json.data) {
+        setKategoriList(json.data);
+      }
+    } catch (error) {
+      console.error("Gagal mengambil daftar kategori:", error);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadKategori = async () => {
+      setIsFetching(true);
+      try {
+        const res = await fetch("/api/v1/admin/kategori");
+        const json = await res.json();
+        if (mounted && res.ok && json.data) {
+          setKategoriList(json.data);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil daftar kategori:", error);
+      } finally {
+        if (mounted) {
+          setIsFetching(false);
+        }
+      }
+    };
+
+    void loadKategori();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!errorMsg) return;
+
+    const timer = setTimeout(() => {
+      setErrorMsg("");
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [errorMsg]);
+
+  // 🚀 2. HANDLER DRAG & DROP GAMBAR
+  const processFile = (file: File | undefined) => {
+    setErrorMsg("");
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      return setErrorMsg("⚠️ Harap upload file gambar (PNG/JPG).");
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      return setErrorMsg("⚠️ Ukuran gambar maksimal 2 MB.");
+    }
+
+    setFileIcon(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    processFile(e.target.files?.[0]);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); processFile(e.dataTransfer.files?.[0]); };
+
+  // 🔥 3. HANDLER KLIK TOMBOL EDIT
+  const handleEditClick = (item: KategoriItem) => {
+    setEditingId(item.public_id);
+    setNamaKategori(item.nama_kategori);
+    setPreviewUrl(item.icon_kategori || "");
+    setFileIcon(null); // Kosongin file baru, pake preview URL lama
+    setErrorMsg("");
+  };
+
+  // 🔥 4. HANDLER BATAL EDIT
+  const handleBatalEdit = () => {
+    setEditingId(null);
+    setNamaKategori("");
+    setFileIcon(null);
+    setPreviewUrl("");
+    setErrorMsg("");
+  };
+
+  // 🚀 5. SUBMIT FORM (HYBRID: POST / PUT)
+  const handleSimpan = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
-    // Simulasi API
-    setTimeout(() => {
-      router.push("/barang");
-    }, 1000);
+    if (!namaKategori) return;
+
+    setLoadingForm(true);
+    setErrorMsg("");
+
+    try {
+      let iconUrl = "";
+
+      // A. Upload Gambar ke MinIO JIKA ada file baru yang dipilih
+      if (fileIcon) {
+        const formData = new FormData();
+        formData.append("icon", fileIcon);
+
+        const uploadRes = await fetch("/api/v1/admin/kategori/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        const uploadJson = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadJson.message || "Gagal mengunggah icon.");
+        
+        iconUrl = uploadJson.url;
+      }
+
+      // B. Siapkan Payload JSON
+      const payload: { nama_kategori: string; icon_kategori?: string } = {
+        nama_kategori: namaKategori,
+      };
+      
+      // Kirim URL icon baru ke Golang kalau ada (Backend bakal ngabaikan kalau kosong)
+      if (iconUrl) {
+        payload.icon_kategori = iconUrl;
+      }
+
+      // C. Tentukan Endpoint & Method (PUT untuk Edit, POST untuk Tambah Baru)
+      const endpoint = editingId 
+        ? `/api/v1/admin/kategori/${editingId}` 
+        : "/api/v1/admin/kategori";
+      
+      const method = editingId ? "PUT" : "POST";
+
+      const res = await fetch(endpoint, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || "Gagal menyimpan kategori.");
+
+      // D. Sukses! Reset form dan refresh list
+      handleBatalEdit();
+      fetchKategori(); 
+
+    } catch (error: unknown) {
+      console.error("Save error:", error);
+      setErrorMsg(error instanceof Error ? error.message : "Terjadi kesalahan sistem.");
+    } finally {
+      setLoadingForm(false);
+    }
+  };
+
+  // 🚀 6. LOGIC MODAL DELETE CUSTOM
+  const triggerDelete = (id: string) => {
+    setKategoriToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setKategoriToDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!kategoriToDelete) return;
+    
+    try {
+      const res = await fetch(`/api/v1/admin/kategori/${kategoriToDelete}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || "Gagal menghapus kategori");
+      
+      setErrorMsg(""); 
+      fetchKategori();
+
+      // Kalau yang dihapus kebetulan lagi di-edit, reset formnya juga
+      if (editingId === kategoriToDelete) {
+        handleBatalEdit();
+      }
+
+    } catch (error: unknown) {
+      console.error("Delete error:", error);
+      setErrorMsg(error instanceof Error ? error.message : "Terjadi kesalahan saat menghapus kategori");
+    } finally {
+      setShowDeleteModal(false);
+      setKategoriToDelete(null);
+    }
   };
 
   return (
-    <div className="w-full pb-12">
+    <div className="w-full pb-12 relative">
+      
+      {/* 🔥 CUSTOM MODAL DELETE */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-zinc-200 transform scale-100 animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-4 text-[#AF520C]">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-zinc-900 mb-2">Hapus Kategori?</h3>
+            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+              Tindakan ini tidak dapat dibatalkan. Pastikan kategori ini sudah tidak digunakan oleh barang manapun.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button 
+                onClick={cancelDelete} 
+                className="flex-1 py-2.5 rounded-lg border border-zinc-200 text-zinc-600 font-bold text-sm hover:bg-zinc-50 transition"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={confirmDelete} 
+                className="flex-1 py-2.5 rounded-lg bg-[#AF520C] text-white font-bold text-sm hover:bg-[#8e4209] transition shadow-sm"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex justify-between items-end mb-8">
         <div>
@@ -38,61 +273,121 @@ export default function TambahKategoriPage() {
         </div>
       </div>
 
+      {errorMsg && (
+        <div className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-md rounded-xl border border-[#AF520C]/25 bg-white px-4 py-3 text-sm text-zinc-700 shadow-2xl shadow-orange-950/10 backdrop-blur-sm">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-full bg-orange-50 p-1.5 text-[#AF520C]">
+              <Info size={14} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-zinc-900">Perhatian</p>
+              <p className="mt-0.5 leading-relaxed text-zinc-600">{errorMsg}</p>
+            </div>
+            <button
+              onClick={() => setErrorMsg("")}
+              className="shrink-0 rounded-full p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+              aria-label="Tutup pesan"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* KIRI: FORM TAMBAH KATEGORI */}
+        {/* KIRI: FORM TAMBAH / EDIT KATEGORI */}
         <div className="lg:col-span-2">
-          <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
-            <h2 className="text-lg font-bold text-zinc-800 mb-6 flex items-center gap-2">
-              <Tags size={20} className="text-[#AF520C]" />
-              Tambah Kategori Baru
-            </h2>
+          <div className={`bg-white p-6 rounded-xl border shadow-sm transition-colors duration-300 ${editingId ? "border-[#AF520C]/50 shadow-orange-500/5" : "border-zinc-200"}`}>
+            
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold text-zinc-800 flex items-center gap-2">
+                <Tags size={20} className="text-[#AF520C]" />
+                {editingId ? "Edit Kategori" : "Tambah Kategori Baru"}
+              </h2>
+            </div>
 
             <form onSubmit={handleSimpan} className="flex flex-col gap-6">
-              
-              {/* Layout Form Baru: Kiri Upload, Kanan Input & Tips */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                 
-                {/* Bagian Upload Ikon (Porsi lebih kecil) */}
+                {/* 🚀 BAGIAN UPLOAD IKON */}
                 <div className="md:col-span-2">
                   <label className="text-sm font-bold text-zinc-600 mb-2 block">Ikon Kategori</label>
-                  <div className="w-full h-36 border-2 border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-zinc-50 transition cursor-pointer">
-                    <div className="w-10 h-10 bg-orange-50 text-[#AF520C] rounded-full flex items-center justify-center mb-2">
-                      <CloudUpload size={20} />
-                    </div>
-                    <p className="font-bold text-zinc-700 text-xs mb-1">Unggah Ikon</p>
-                    <p className="text-[10px] text-zinc-400">PNG Transparan (512px)</p>
-                  </div>
+                  <label 
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`w-full h-36 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center transition cursor-pointer relative overflow-hidden group
+                      ${isDragging ? "border-[#AF520C] bg-orange-50" : "border-zinc-300 bg-white hover:bg-zinc-50"}
+                    `}
+                  >
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleFileChange} 
+                    />
+                    
+                    {previewUrl ? (
+                      <div className="absolute inset-0 w-full h-full bg-zinc-100 flex items-center justify-center p-2">
+                        <Image src={previewUrl} alt="Preview" fill unoptimized className="object-contain p-2" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-sm text-white text-xs font-bold">
+                          Ganti Gambar
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-colors ${isDragging ? "bg-[#AF520C] text-white" : "bg-orange-50 text-[#AF520C]"}`}>
+                          <CloudUpload size={20} />
+                        </div>
+                        <p className="font-bold text-zinc-700 text-xs mb-1">
+                          {isDragging ? "Lepaskan Gambar!" : "Tarik File / Klik"}
+                        </p>
+                        <p className="text-[10px] text-zinc-400">PNG/JPG (Maks 2MB)</p>
+                      </>
+                    )}
+                  </label>
                 </div>
 
-                {/* Bagian Input Nama & Kotak Tips biar nggak kosong */}
+                {/* BAGIAN INPUT NAMA */}
                 <div className="md:col-span-3 flex flex-col justify-between">
                   <div>
                     <label className="text-sm font-bold text-zinc-600 mb-2 block">Nama Kategori</label>
-                    <input type="text" required placeholder="Cth: Kertas & Buku" className="w-full border border-zinc-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#AF520C]" />
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="Cth: Kertas & Buku" 
+                      className="w-full border border-zinc-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#AF520C]" 
+                      value={namaKategori}
+                      onChange={(e) => setNamaKategori(e.target.value)}
+                    />
                   </div>
 
-                  {/* Kotak Estetik Pengisi Kekosongan */}
                   <div className="mt-4 p-3.5 bg-orange-50/50 border border-[#AF520C]/20 rounded-lg flex gap-3 items-start">
                     <Info size={16} className="text-[#AF520C] mt-0.5 shrink-0" />
                     <div>
                       <h3 className="text-xs font-bold text-zinc-800 mb-1">Panduan Kategori</h3>
                       <p className="text-[11px] text-zinc-600 leading-relaxed">
-                        Gunakan nama yang singkat dan padat. Jika Anda melakukan kesalahan penamaan, silakan hapus kategori di panel kanan dan buat ulang.
+                        Gunakan nama yang singkat dan padat. Anda dapat mengubah nama atau ikon kategori yang sudah ada melalui tombol edit di sebelah kanan.
                       </p>
                     </div>
                   </div>
                 </div>
-
               </div>
 
-              {/* Tombol Aksi */}
+              {/* TOMBOL AKSI */}
               <div className="flex justify-end gap-3 mt-2 pt-6 border-t border-zinc-100">
-                <Link href="/barang" className="px-6 py-2.5 bg-zinc-50 border border-zinc-200 text-zinc-600 rounded-lg text-sm font-bold hover:bg-zinc-100 transition">
-                  Batal
-                </Link>
-                <button type="submit" disabled={loading} className="px-6 py-2.5 bg-[#AF520C] text-white rounded-lg text-sm font-bold hover:bg-[#8e4209] transition shadow-sm disabled:opacity-50">
-                  {loading ? "Menyimpan..." : "Simpan Kategori"}
+                {editingId && (
+                  <button 
+                    type="button" 
+                    onClick={handleBatalEdit}
+                    className="px-6 py-2.5 bg-zinc-100 text-zinc-600 rounded-lg text-sm font-bold hover:bg-zinc-200 transition"
+                  >
+                    Batal Edit
+                  </button>
+                )}
+                <button type="submit" disabled={loadingForm} className="px-6 py-2.5 bg-[#AF520C] text-white rounded-lg text-sm font-bold hover:bg-[#8e4209] transition shadow-sm disabled:opacity-50 flex items-center gap-2">
+                  {loadingForm ? <><Loader2 className="animate-spin" size={16} /> Menyimpan...</> : (editingId ? "Simpan Perubahan" : "Simpan Kategori")}
                 </button>
               </div>
             </form>
@@ -104,29 +399,62 @@ export default function TambahKategoriPage() {
           <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm h-full flex flex-col">
             <h2 className="text-lg font-bold text-zinc-800 mb-6">Kategori Tersedia</h2>
             
-            <div className="flex flex-col gap-3 flex-1">
-              {existingKategori.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3.5 border border-zinc-100 rounded-lg hover:border-red-200 hover:bg-red-50/30 transition group">
-                  <div className="flex items-center gap-3">
-                    <img src={item.icon} alt={item.nama} className="w-9 h-9 rounded-lg shadow-sm" />
-                    {/* Teks Deskripsi udah lenyap, sisa nama aja biar clean */}
-                    <p className="font-bold text-zinc-800 text-sm">{item.nama}</p>
-                  </div>
-                  
-                  {/* Tombol Edit dihanguskan, sisa tombol Hapus warna merah */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="text-zinc-400 hover:text-red-500 bg-white p-1.5 rounded-md shadow-sm border border-zinc-100 hover:border-red-200 transition-all">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+            <div className="flex flex-col gap-3 flex-1 overflow-y-auto max-h-[400px] pr-2">
+              {isFetching ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-[#AF520C]" size={24} />
                 </div>
-              ))}
-            </div>
+              ) : kategoriList.length > 0 ? (
+                kategoriList.map((item) => {
+                  const itemId = item.public_id;
+                  const isCurrentlyEditing = editingId === itemId;
 
-            <div className="mt-6 p-4 bg-zinc-50 rounded-lg border border-zinc-100 text-center">
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Menghapus kategori akan memindahkan semua barang di dalamnya menjadi status <span className="font-bold text-zinc-700">Uncategorized</span>.
-              </p>
+                  return (
+                    <div 
+                      key={itemId} 
+                      className={`flex items-center justify-between p-3.5 border rounded-lg transition group
+                        ${isCurrentlyEditing ? "border-[#AF520C] bg-orange-50/50" : "border-zinc-100 hover:border-[#AF520C]/30 hover:bg-zinc-50"}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {item.icon_kategori ? (
+                          <Image src={item.icon_kategori} alt={item.nama_kategori} width={36} height={36} unoptimized className="w-9 h-9 rounded-lg shadow-sm object-cover bg-white" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg shadow-sm bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-xs">
+                            {item.nama_kategori.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <p className={`font-bold text-sm capitalize ${isCurrentlyEditing ? "text-[#AF520C]" : "text-zinc-800"}`}>
+                          {item.nama_kategori}
+                        </p>
+                      </div>
+                      
+                      <div className={`flex gap-1.5 transition-opacity ${isCurrentlyEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                        {/* 🔥 TOMBOL EDIT BARU */}
+                        <button 
+                          onClick={() => handleEditClick(item)}
+                          className="text-zinc-400 hover:text-blue-600 bg-white p-1.5 rounded-md shadow-sm border border-zinc-100 hover:border-blue-200 transition-all"
+                          title="Edit Kategori"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button 
+                          onClick={() => !item.jumlah_barang && triggerDelete(itemId)}
+                          className={`bg-white p-1.5 rounded-md shadow-sm border transition-all ${
+                            item.jumlah_barang > 0
+                              ? "text-zinc-300 border-zinc-100 cursor-not-allowed"
+                              : "text-zinc-400 hover:text-red-500 border-zinc-100 hover:border-red-200"
+                          }`}
+                          title={item.jumlah_barang > 0 ? `Tidak bisa dihapus (${item.jumlah_barang} produk terkait)` : "Hapus Kategori"}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-center text-zinc-500 py-4">Belum ada data kategori.</p>
+              )}
             </div>
           </div>
         </div>

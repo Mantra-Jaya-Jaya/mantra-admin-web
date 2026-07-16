@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { Search } from 'lucide-react';
+import { getBadgeClassFromName, getDotColorFromName } from '@/lib/constants/status';
 
 export default function TransactionTable({ data }: { data: any[] }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,6 +44,7 @@ export default function TransactionTable({ data }: { data: any[] }) {
       <table className="w-full text-left">
         <thead className="bg-[#f8fafc] text-zinc-500 text-xs font-bold uppercase tracking-wider">
           <tr>
+            <th className="px-6 py-4">No</th>
             <th className="px-6 py-4">ID Transaksi</th>
             <th className="px-6 py-4">Kasir</th>
             <th className="px-6 py-4">Pelanggan</th>
@@ -52,22 +54,17 @@ export default function TransactionTable({ data }: { data: any[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100 text-sm text-zinc-700">
-          {currentData.map((trx) => (
+          {currentData.map((trx, index) => (
             <tr key={trx.id} className="hover:bg-zinc-50 transition">
+              <td className="px-6 py-4 text-zinc-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
               <td className="px-6 py-4 font-bold">{trx.id}</td>
               <td className="px-6 py-4">{trx.kasir}</td>
               <td className="px-6 py-4">{trx.pelanggan}</td>
               <td className="px-6 py-4 text-zinc-400">{trx.tanggal}</td>
               <td className="px-6 py-4 font-semibold">{trx.total}</td>
               <td className="px-6 py-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 w-fit ${
-                  trx.status === 'Selesai' ? 'bg-green-50 text-green-600' : 
-                  trx.status === 'Proses' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    trx.status === 'Selesai' ? 'bg-green-600' : 
-                    trx.status === 'Proses' ? 'bg-orange-600' : 'bg-red-600'
-                  }`}></span>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 w-fit ${getBadgeClassFromName(trx.status)}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${getDotColorFromName(trx.status)}`}></span>
                   {trx.status}
                 </span>
               </td>

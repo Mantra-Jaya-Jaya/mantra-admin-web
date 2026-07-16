@@ -1,35 +1,186 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, ChevronDown, Settings, Save, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function KaryawanPage() {
-  // State untuk filter pencarian (persiapan buat disambung ke API nanti)
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("Semua Role");
-  const [statusFilter, setStatusFilter] = useState("Status Aktif");
+  const [statusFilter, setStatusFilter] = useState("Semua Status");
 
-  // Data Dummy Karyawan (Role dibatasi Kasir & Kurir)
-  const dummyKaryawan = [
-    { id: 1, nama: "Budi Kusuma", email: "budi@mantrapos.com", role: "Kasir", terakhirLogin: "12 Oct 2023, 14:30", status: "Aktif", inisial: "BK" },
-    { id: 2, nama: "Siti Aminah", email: "siti@mantrapos.com", role: "Kurir", terakhirLogin: "12 Oct 2023, 11:15", status: "Aktif", inisial: "SA" },
-    { id: 3, nama: "Riztika Amelia", email: "riztika@mantrapos.com", role: "Kasir", terakhirLogin: "11 Oct 2023, 09:00", status: "Aktif", inisial: "RA" },
-    { id: 4, nama: "Rafa Ahmad", email: "rafa@mantrapos.com", role: "Kurir", terakhirLogin: "10 Oct 2023, 18:20", status: "Nonaktif", inisial: "RA" },
-    { id: 5, nama: "King Arthur", email: "king@mantrapos.com", role: "Kasir", terakhirLogin: "09 Oct 2023, 08:30", status: "Aktif", inisial: "KA" },
-    { id: 6, nama: "Nabila Syalwa", email: "nabila@mantrapos.com", role: "Kasir", terakhirLogin: "08 Oct 2023, 16:45", status: "Aktif", inisial: "NS" },
-  ];
+  // Pengaturan
+  const [showPengaturan, setShowPengaturan] = useState(false);
+  const [radius, setRadius] = useState("5");
+  const [savingRadius, setSavingRadius] = useState(false);
+  const [radiusMessage, setRadiusMessage] = useState("");
 
+  useEffect(() => {
+    fetch("/api/v1/admin/pengaturan")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.data?.radius_kurir_internal) {
+          setRadius(json.data.radius_kurir_internal);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveRadius = async () => {
+    setSavingRadius(true);
+    setRadiusMessage("");
+    try {
+      const res = await fetch("/api/v1/admin/pengaturan", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "radius_kurir_internal", value: radius }),
+      });
+      const json = await res.json();
+      if (json.status === "success") {
+        setRadiusMessage("Pengaturan berhasil disimpan!");
+      } else {
+        setRadiusMessage("Gagal: " + (json.message || "Unknown error"));
+      }
+    } catch {
+      setRadiusMessage("Gagal menyimpan pengaturan");
+    } finally {
+      setSavingRadius(false);
+    }
+  };
+
+  const [dummyKaryawan, setDummyKaryawan] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5; // Kita batasin 1 halaman tampil 5 orang aja
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 5;
 
-  // Menghitung total halaman (6 orang / 5 = 2 halaman)
-  const totalPages = Math.ceil(dummyKaryawan.length / itemsPerPage);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, publicId: "", nama: "" });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Memotong data asli biar yang tampil cuma 5 baris sesuai halaman aktif
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // Reset page ke 1 kalau cari baru
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchKaryawan = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/v1/admin/karyawan?limit=${itemsPerPage}&page=${currentPage}&search=${encodeURIComponent(debouncedSearch)}&role=${encodeURIComponent(roleFilter)}&status=${encodeURIComponent(statusFilter)}`);
+      const result = await res.json();
+      if (res.ok && result.data) {
+        setDummyKaryawan(
+          result.data.map((item: any) => ({
+            id: item.public_id,
+            nama: item.nama_lengkap,
+            email: item.email,
+            role: item.role,
+            terakhirLogin: item.terakhir_login,
+            status: item.status,
+            inisial: item.inisial,
+            fotoProfil: item.foto_profil
+          }))
+        );
+        if (result.meta) {
+          setTotalPages(result.meta.total_pages || 1);
+          setTotalItems(result.meta.total || 0);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal ambil data karyawan", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/v1/admin/karyawan/${deleteModal.publicId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (res.ok) {
+        fetchKaryawan();
+        setDeleteModal({ isOpen: false, publicId: "", nama: "" });
+      } else {
+        setDeleteModal({ isOpen: false, publicId: "", nama: "" });
+        let errorMsg = json.message || "Gagal menghapus karyawan.";
+        if (json.message && json.message.includes("Karyawan memiliki riwayat transaksi")) {
+          errorMsg = "Karyawan ini tidak dapat dihapus permanen karena memiliki riwayat transaksi. Mohon nonaktifkan saja statusnya untuk menjaga integritas data.";
+        }
+        setErrorModal({ isOpen: true, message: errorMsg });
+      }
+    } catch {
+      setDeleteModal({ isOpen: false, publicId: "", nama: "" });
+      setErrorModal({ isOpen: true, message: "Terjadi kesalahan saat menghapus data." });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKaryawan();
+  }, [currentPage, debouncedSearch, roleFilter, statusFilter]);
+
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentData = dummyKaryawan.slice(startIndex, startIndex + itemsPerPage);
+  const currentData = dummyKaryawan; // Data dari API sudah dipotong
 
   return (
+    <>
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform animate-in zoom-in-95 duration-200 border border-zinc-200 p-6 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mb-4 text-red-500 border border-red-100">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-extrabold text-zinc-900 mb-2">Hapus Karyawan?</h3>
+            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+              Anda yakin ingin menghapus <span className="font-bold text-zinc-800">"{deleteModal.nama}"</span>? Seluruh data terkait karyawan ini akan dihapus permanen.
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setDeleteModal({ isOpen: false, publicId: "", nama: "" })}
+                className="flex-1 px-4 py-2.5 bg-zinc-100 text-zinc-700 font-bold text-sm rounded-xl hover:bg-zinc-200 transition"
+                disabled={isDeleting}
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2.5 bg-[#AF520C] text-white font-bold text-sm rounded-xl hover:bg-[#8e4209] transition flex items-center justify-center gap-2"
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {errorModal.isOpen && (
+        <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform animate-in zoom-in-95 duration-200 border border-zinc-200 p-6 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mb-4 text-amber-500 border border-amber-100">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-extrabold text-zinc-900 mb-2">Perhatian</h3>
+            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+              {errorModal.message}
+            </p>
+            <button
+              onClick={() => setErrorModal({ isOpen: false, message: "" })}
+              className="w-full px-4 py-2.5 bg-zinc-100 text-zinc-700 font-bold text-sm rounded-xl hover:bg-zinc-200 transition"
+            >
+              Mengerti
+            </button>
+          </div>
+        </div>
+      )}
+
     <div className="w-full pb-12">
       
       {/* HEADER */}
@@ -39,53 +190,70 @@ export default function KaryawanPage() {
           <p className="text-sm text-zinc-500 font-medium">Kelola Karyawan Anda</p>
         </div>
         
-        <Link 
-          href="/karyawan/tambah" 
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#AF520C] text-white rounded-lg text-sm font-bold hover:bg-[#8e4209] transition shadow-sm"
-        >
-          <Plus size={18} />
-          Tambah Karyawan
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowPengaturan(!showPengaturan)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition shadow-sm border ${
+              showPengaturan
+                ? "bg-[#AF520C] text-white border-[#AF520C]"
+                : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50"
+            }`}
+          >
+            <Settings size={18} />
+            Pengaturan
+          </button>
+          <Link 
+            href="/karyawan/tambah" 
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#AF520C] text-white rounded-lg text-sm font-bold hover:bg-[#8e4209] transition shadow-sm"
+          >
+            <Plus size={18} />
+            Tambah Karyawan
+          </Link>
+        </div>
       </div>
 
       {/* FILTER BAR (Putih melengkung kayak di desain lu) */}
-      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col md:flex-row gap-4 mb-6">
+      {/* FILTER BAR */}
+      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col sm:flex-row gap-4 mb-6">
         {/* Search */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input 
             type="text" 
-            placeholder="Cari nama atau email karyawan..." // Kak Gem benerin copy-paste lu wkwk
-            className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C]"
+            spellCheck="false"
+            placeholder="Cari nama atau email karyawan..."
+            className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-[#AF520C]"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         {/* Dropdown Role */}
-        <div className="w-full md:w-48">
+        <div className="relative">
           <select 
-            className="w-full px-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C] appearance-none bg-white cursor-pointer"
+            className="appearance-none bg-white border border-zinc-200 text-zinc-700 text-sm rounded-lg pl-4 pr-10 py-2 outline-none cursor-pointer hover:bg-zinc-50 focus:border-[#AF520C]"
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="Semua Role">Semua Role</option>
             <option value="Kasir">Kasir</option>
             <option value="Kurir">Kurir</option>
           </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
         </div>
 
         {/* Dropdown Status */}
-        <div className="w-full md:w-48">
+        <div className="relative">
           <select 
-            className="w-full px-4 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-[#AF520C] appearance-none bg-white cursor-pointer"
+            className="appearance-none bg-white border border-zinc-200 text-zinc-700 text-sm rounded-lg pl-4 pr-10 py-2 outline-none cursor-pointer hover:bg-zinc-50 focus:border-[#AF520C]"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
-            <option value="Status Aktif">Status Aktif</option>
             <option value="Semua Status">Semua Status</option>
+            <option value="Aktif">Status Aktif</option>
             <option value="Nonaktif">Nonaktif</option>
           </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={16} />
         </div>
       </div>
 
@@ -93,23 +261,27 @@ export default function KaryawanPage() {
       <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-zinc-50 border-b border-zinc-200">
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Terakhir Login</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th>
+            <thead className="bg-[#f8fafc] text-zinc-600 text-xs font-bold uppercase tracking-wider border-b border-zinc-200">
+              <tr>
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Terakhir Login</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-zinc-100 text-sm text-zinc-800">
               {currentData.map((user) => (
                 <tr key={user.id} className="hover:bg-orange-50/30 transition">
                   {/* Kolom User (Foto + Nama + Email) */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-sm shrink-0">
-                        {user.inisial}
+                      <div className="w-10 h-10 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-sm shrink-0 overflow-hidden">
+                        {user.fotoProfil ? (
+                          <img src={user.fotoProfil} alt={user.nama} className="w-full h-full object-cover" />
+                        ) : (
+                          user.inisial
+                        )}
                       </div>
                       <div>
                         <p className="font-bold text-sm text-zinc-800">{user.nama}</p>
@@ -119,17 +291,17 @@ export default function KaryawanPage() {
                   </td>
                   
                   {/* Kolom Role */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <span className="text-sm font-semibold text-zinc-700">{user.role}</span>
                   </td>
                   
                   {/* Kolom Terakhir Login */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <span className="text-sm text-zinc-500">{user.terakhirLogin}</span>
                   </td>
                   
                   {/* Kolom Status (Badge) */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                       user.status === "Aktif" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
                     }`}>
@@ -139,14 +311,27 @@ export default function KaryawanPage() {
                   </td>
                   
                   {/* Kolom Action */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <div className="flex items-center gap-3">
-                      <button className="text-zinc-400 hover:text-red-500 transition" title="Hapus">
+                      <button
+                        className="text-zinc-400 hover:text-red-500 transition"
+                        title="Hapus"
+                        onClick={() => {
+                          if (user.status === "Aktif") {
+                            setErrorModal({ 
+                              isOpen: true, 
+                              message: `Karyawan "${user.nama}" masih berstatus Aktif. Mohon edit dan ubah statusnya menjadi Nonaktif terlebih dahulu.` 
+                            });
+                          } else {
+                            setDeleteModal({ isOpen: true, publicId: user.id, nama: user.nama });
+                          }
+                        }}
+                      >
                         <Trash2 size={18} />
                       </button>
-                      <button className="text-zinc-400 hover:text-blue-500 transition" title="Edit">
+                      <Link href={`/karyawan/edit/${user.id}`} className="text-zinc-400 hover:text-blue-500 transition" title="Edit">
                         <Edit2 size={18} />
-                      </button>
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -158,7 +343,7 @@ export default function KaryawanPage() {
         {/* PAGINATION */}
         <div className="px-6 py-4 border-t border-zinc-200 flex items-center justify-between bg-white">
           <p className="text-sm text-zinc-500">
-            Menampilkan {startIndex + 1} hingga {Math.min(startIndex + itemsPerPage, dummyKaryawan.length)} dari {dummyKaryawan.length} karyawan
+            Menampilkan {totalItems === 0 ? 0 : startIndex + 1} hingga {startIndex + currentData.length} dari {totalItems} karyawan
           </p>
           
           {/* Cuma tampil kalau halamannya lebih dari 1 */}
@@ -201,6 +386,54 @@ export default function KaryawanPage() {
         </div>
       </div>
 
+      {/* PENGATURAN TOKO — collapsible */}
+      {showPengaturan && (
+        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 mt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Settings className="text-[#AF520C]" size={20} />
+            <h3 className="text-lg font-bold text-zinc-800">Pengaturan Toko</h3>
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-zinc-700 mb-2">
+              Radius Kurir Internal (km)
+            </label>
+            <p className="text-xs text-zinc-500 mb-3">
+              Kurir toko hanya melayani pengiriman dalam radius ini dari toko.
+              Di luar radius ini, customer harus memilih ekspedisi eksternal.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={radius}
+                onChange={(e) => setRadius(e.target.value)}
+                className="w-24 px-3 py-2 border border-zinc-300 rounded-lg text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-[#AF520C] focus:border-transparent"
+              />
+              <span className="text-zinc-600 font-medium">kilometer</span>
+            </div>
+          </div>
+          <button
+            onClick={handleSaveRadius}
+            disabled={savingRadius}
+            className="flex items-center gap-2 bg-[#AF520C] hover:bg-[#8e4209] disabled:bg-zinc-300 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+          >
+            <Save size={16} />
+            {savingRadius ? "Menyimpan..." : "Simpan"}
+          </button>
+          {radiusMessage && (
+            <div className={`mt-3 p-3 rounded-lg text-sm ${
+              radiusMessage.includes("berhasil") 
+                ? "bg-green-50 text-green-700 border border-green-200" 
+                : "bg-red-50 text-red-700 border border-red-200"
+            }`}>
+              {radiusMessage}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
+    </>
   );
 }

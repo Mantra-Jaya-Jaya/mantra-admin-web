@@ -62,7 +62,7 @@ export default function Home() {
   };
 
   const statData = [
-    { title: "Total Revenue", value: formatRupiah(data?.penjualan_hari_ini || 0), trend: data?.trend_revenue, type: "increase" },
+    { title: "Total Revenue", value: formatRupiah(data?.total_revenue || 0), trend: data?.trend_revenue, type: "increase" },
     { title: "Total Orders", value: (data?.total_pesanan || 0).toLocaleString(), trend: data?.trend_pesanan, type: "increase" },
     { title: "Active Customers", value: (data?.total_customer_aktif || 0).toLocaleString(), trend: data?.trend_customer, type: "increase" },
     { title: "Low Stock Items", value: (data?.total_stok_menipis || 0).toString(), trend: "Requires immediate attention", type: "danger" },

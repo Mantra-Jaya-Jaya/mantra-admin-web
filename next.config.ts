@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 // Ambil IP dari environment variable (jika ada), kalau tidak ada gunakan default localhost
 const devOrigins = process.env.ALLOWED_DEV_ORIGINS 
@@ -8,6 +9,12 @@ const devOrigins = process.env.ALLOWED_DEV_ORIGINS
 const nextConfig: NextConfig = {
   /* config options here */
   allowedDevOrigins: devOrigins,
+  
+  turbopack: {
+    resolveAlias: {
+      tailwindcss: path.resolve(__dirname, "node_modules/tailwindcss"),
+    },
+  },
   
   // 🔥 TAMBAHAN BARU: Izin untuk me-render gambar dari MinIO
   images: {

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bell, LogOut } from 'lucide-react';
@@ -9,8 +9,23 @@ export default function Navbar() {
   const pathname = usePathname(); 
   const router = useRouter();
   
-  // State untuk buka/tutup menu profil
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [adminData, setAdminData] = useState<{nama_lengkap: string; email: string; foto_profil: string} | null>(null);
+
+  useEffect(() => {
+    if (pathname === '/login') return;
+
+    fetch('/api/v1/admin/profil')
+      .then(res => res.json())
+      .then(json => {
+        if (json.status === "success" && json.data) {
+          setAdminData(json.data);
+        } else {
+          setAdminData(null);
+        }
+      })
+      .catch(() => setAdminData(null));
+  }, [pathname]);
 
   // Saklar Otomatis: Kalau lagi di halaman login, Navbar langsung ngilang!
   if (pathname === '/login') return null;
@@ -54,6 +69,12 @@ export default function Navbar() {
           <Link href="/karyawan" className={`pb-1 transition ${pathname === '/karyawan' ? 'text-[#AF520C] border-b-2 border-[#AF520C]' : 'hover:text-zinc-800'}`}>
             Karyawan
           </Link>
+          <Link href="/pengantaran" className={`pb-1 transition ${pathname === '/pengantaran' || pathname.startsWith('/pengantaran/') ? 'text-[#AF520C] border-b-2 border-[#AF520C]' : 'hover:text-zinc-800'}`}>
+            Pengantaran
+          </Link>
+          <Link href="/ekspedisi" className={`pb-1 transition ${pathname === '/ekspedisi' || pathname.startsWith('/ekspedisi/') ? 'text-[#AF520C] border-b-2 border-[#AF520C]' : 'hover:text-zinc-800'}`}>
+            Ekspedisi
+          </Link>
         </div>
         
         <div className="flex items-center gap-4 border-l border-zinc-200 pl-6">
@@ -68,7 +89,7 @@ export default function Navbar() {
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="w-9 h-9 bg-zinc-200 rounded-full overflow-hidden border border-zinc-200 cursor-pointer hover:ring-2 hover:ring-[#AF520C]/50 transition-all"
             >
-              <img src="https://ui-avatars.com/api/?name=Admin+Mantra&background=171717&color=fff" alt="Admin" />
+              <img src={adminData?.foto_profil || `https://ui-avatars.com/api/?name=${adminData?.nama_lengkap || 'User'}&background=171717&color=fff`} alt={adminData?.nama_lengkap || 'User'} className="w-full h-full object-cover" />
             </div>
 
             {/* Dropdown Menu (Muncul kalau state showProfileMenu === true) */}
@@ -84,10 +105,19 @@ export default function Navbar() {
                 <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-zinc-200 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   {/* Info User */}
                   <div className="px-3 py-3 border-b border-zinc-100 mb-2">
-                    <p className="text-sm font-bold text-zinc-800">Terra Surya</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">admin@mantra.com</p>
+                    <p className="text-sm font-bold text-zinc-800">{adminData?.nama_lengkap}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{adminData?.email}</p>
                   </div>
-                  
+
+                  {/* Link Profil */}
+                  <Link
+                    href="/profil"
+                    className="block w-full text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 px-4 py-2.5 rounded-lg transition-colors mb-1"
+                    onClick={() => setShowProfileMenu(false)}
+                  >
+                    Profil
+                  </Link>
+
                   {/* Tombol Logout Coklat */}
                   <button 
                     onClick={handleLogout}
